@@ -44,6 +44,7 @@ public class FileWalkerService {
     /**
      * Walk a directory tree and collect all regular files.
      * Calculates total size during the walk for memory efficiency.
+     * Shows progress updates every 10,000 files discovered.
      *
      * @param rootPath Root directory to scan
      * @return WalkResult containing files and total size
@@ -52,6 +53,8 @@ public class FileWalkerService {
     public WalkResult walk(Path rootPath) throws IOException {
         List<Path> files = new ArrayList<>();
         long[] totalSize = {0L}; // Use array to allow modification in lambda
+        long[] lastReportedCount = {0L}; // Track when we last reported progress
+        final long PROGRESS_INTERVAL = 10000; // Report every 10k files
 
         FileVisitor<Path> visitor = new SimpleFileVisitor<>() {
             @Override
@@ -68,6 +71,14 @@ public class FileWalkerService {
                 if (attrs.isRegularFile() && !shouldExcludeFile(file)) {
                     files.add(file);
                     totalSize[0] += attrs.size();
+
+                    // Show progress every PROGRESS_INTERVAL files
+                    long currentCount = files.size();
+                    if (currentCount - lastReportedCount[0] >= PROGRESS_INTERVAL) {
+                        System.out.print("\rDiscovered: " + formatFileCount(currentCount) + " files...");
+                        System.out.flush();
+                        lastReportedCount[0] = currentCount;
+                    }
                 }
                 return FileVisitResult.CONTINUE;
             }
@@ -86,8 +97,22 @@ public class FileWalkerService {
 
         Files.walkFileTree(rootPath, options, Integer.MAX_VALUE, visitor);
 
+        // Clear progress line and show final count
+        System.out.print("\r" + " ".repeat(60) + "\r"); // Clear the line
+        System.out.flush();
+
         log.info("Found {} files ({} bytes) in {}", files.size(), totalSize[0], rootPath);
         return new WalkResult(files, totalSize[0]);
+    }
+
+    /**
+     * Format file count with thousand separators for readability.
+     *
+     * @param count Number of files
+     * @return Formatted string
+     */
+    private String formatFileCount(long count) {
+        return String.format("%,d", count);
     }
 
     /**

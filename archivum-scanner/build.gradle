@@ -53,6 +53,11 @@ application {
     mainClass = 'tech.zaisys.archivum.scanner.ScannerApp'
 }
 
+// Enable interactive input for the run task
+tasks.named('run') {
+    standardInput = System.in
+}
+
 tasks.named('test') {
     useJUnitPlatform()
 }

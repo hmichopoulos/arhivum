@@ -3,20 +3,30 @@ package tech.zaisys.archivum.scanner.service;
 import lombok.extern.slf4j.Slf4j;
 
 import java.io.BufferedReader;
+import java.io.Console;
 import java.io.IOException;
 import java.io.InputStreamReader;
 
 /**
  * Service for interactive user prompts with smart defaults.
  * Handles console input with validation and default values.
+ * Uses System.console() when available (proper terminal), falls back to BufferedReader.
  */
 @Slf4j
 public class InteractivePrompt {
 
+    private final Console console;
     private final BufferedReader reader;
 
     public InteractivePrompt() {
+        this.console = System.console();
         this.reader = new BufferedReader(new InputStreamReader(System.in));
+
+        if (console != null) {
+            log.debug("Using System.console() for interactive input");
+        } else {
+            log.debug("Using BufferedReader for input (console not available)");
+        }
     }
 
     /**
@@ -122,11 +132,20 @@ public class InteractivePrompt {
 
     /**
      * Read a line from console, handling IOException gracefully.
+     * Uses System.console() when available for proper terminal input,
+     * falls back to BufferedReader otherwise.
      *
      * @return Input line or empty string on error
      */
     private String readLine() {
         try {
+            // Prefer Console if available (proper terminal connection)
+            if (console != null) {
+                String line = console.readLine();
+                return line != null ? line : "";
+            }
+
+            // Fall back to BufferedReader
             String line = reader.readLine();
             return line != null ? line : "";
         } catch (IOException e) {
@@ -137,10 +156,13 @@ public class InteractivePrompt {
 
     /**
      * Close the reader (call when done with prompts).
+     * Note: System.console() doesn't need to be closed.
      */
     public void close() {
         try {
-            reader.close();
+            if (console == null) {
+                reader.close();
+            }
         } catch (IOException e) {
             log.debug("Error closing reader: {}", e.getMessage());
         }

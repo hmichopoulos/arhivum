@@ -29,6 +29,9 @@ dependencies {
     // YAML configuration
     implementation 'org.yaml:snakeyaml:2.2'
 
+    // EXIF metadata extraction
+    implementation 'com.drewnoakes:metadata-extractor:2.18.0'
+
     // Utilities
     compileOnly 'org.projectlombok:lombok:1.18.30'
     annotationProcessor 'org.projectlombok:lombok:1.18.30'

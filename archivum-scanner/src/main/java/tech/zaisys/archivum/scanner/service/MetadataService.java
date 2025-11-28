@@ -1,6 +1,7 @@
 package tech.zaisys.archivum.scanner.service;
 
 import lombok.extern.slf4j.Slf4j;
+import tech.zaisys.archivum.api.dto.ExifMetadata;
 import tech.zaisys.archivum.api.dto.FileDto;
 import tech.zaisys.archivum.api.enums.FileStatus;
 
@@ -16,10 +17,16 @@ import java.util.UUID;
 /**
  * Service for extracting file metadata.
  * Extracts basic metadata like name, size, dates, and MIME type.
- * EXIF extraction is handled separately in Milestone 3.
+ * Optionally extracts EXIF metadata from images.
  */
 @Slf4j
 public class MetadataService {
+
+    private final ExifExtractor exifExtractor;
+
+    public MetadataService() {
+        this.exifExtractor = new ExifExtractor();
+    }
 
     /**
      * Extract metadata from a file and create a FileDto.
@@ -27,15 +34,22 @@ public class MetadataService {
      * @param file Path to the file
      * @param sourceId Source ID this file belongs to
      * @param hash SHA-256 hash of the file
+     * @param shouldExtractExif Whether to extract EXIF metadata
      * @return FileDto with metadata
      * @throws IOException if metadata cannot be read
      */
-    public FileDto extractMetadata(Path file, UUID sourceId, String hash) throws IOException {
+    public FileDto extractMetadata(Path file, UUID sourceId, String hash, boolean shouldExtractExif) throws IOException {
         BasicFileAttributes attrs = Files.readAttributes(file, BasicFileAttributes.class);
 
         String fileName = file.getFileName().toString();
         String extension = getFileExtension(fileName);
         String mimeType = detectMimeType(file);
+
+        // Extract EXIF if enabled and file is an image
+        ExifMetadata exif = null;
+        if (shouldExtractExif && isImageFile(file)) {
+            exif = exifExtractor.extractExif(file);
+        }
 
         return FileDto.builder()
             .id(UUID.randomUUID())
@@ -49,7 +63,7 @@ public class MetadataService {
             .createdAt(fileTimeToInstant(attrs.creationTime()))
             .accessedAt(fileTimeToInstant(attrs.lastAccessTime()))
             .mimeType(mimeType)
-            .exif(null) // Will be populated in Milestone 3
+            .exif(exif)
             .status(FileStatus.HASHED)
             .isDuplicate(false)
             .scannedAt(Instant.now())

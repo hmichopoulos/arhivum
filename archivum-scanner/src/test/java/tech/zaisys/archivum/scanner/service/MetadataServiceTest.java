@@ -37,7 +37,7 @@ class MetadataServiceTest {
         String hash = "abc123";
 
         // When
-        FileDto dto = metadataService.extractMetadata(file, sourceId, hash);
+        FileDto dto = metadataService.extractMetadata(file, sourceId, hash, false);
 
         // Then
         assertNotNull(dto);
@@ -61,7 +61,7 @@ class MetadataServiceTest {
         UUID sourceId = UUID.randomUUID();
 
         // When
-        FileDto dto = metadataService.extractMetadata(file, sourceId, "hash");
+        FileDto dto = metadataService.extractMetadata(file, sourceId, "hash", false);
 
         // Then
         assertEquals("", dto.getExtension());
@@ -76,7 +76,7 @@ class MetadataServiceTest {
         UUID sourceId = UUID.randomUUID();
 
         // When
-        FileDto dto = metadataService.extractMetadata(file, sourceId, "hash");
+        FileDto dto = metadataService.extractMetadata(file, sourceId, "hash", false);
 
         // Then
         assertEquals(".hidden", dto.getName());
@@ -91,7 +91,7 @@ class MetadataServiceTest {
         UUID sourceId = UUID.randomUUID();
 
         // When
-        FileDto dto = metadataService.extractMetadata(file, sourceId, "hash");
+        FileDto dto = metadataService.extractMetadata(file, sourceId, "hash", false);
 
         // Then
         assertEquals("archive.tar.gz", dto.getName());
@@ -106,7 +106,7 @@ class MetadataServiceTest {
         UUID sourceId = UUID.randomUUID();
 
         // When
-        FileDto dto = metadataService.extractMetadata(file, sourceId, "hash");
+        FileDto dto = metadataService.extractMetadata(file, sourceId, "hash", false);
 
         // Then
         assertEquals("pdf", dto.getExtension());
@@ -211,7 +211,7 @@ class MetadataServiceTest {
         UUID sourceId = UUID.randomUUID();
 
         // When
-        FileDto dto = metadataService.extractMetadata(file, sourceId, "hash");
+        FileDto dto = metadataService.extractMetadata(file, sourceId, "hash", false);
 
         // Then
         assertNotNull(dto.getModifiedAt());
@@ -227,7 +227,7 @@ class MetadataServiceTest {
 
         // When & Then
         assertThrows(IOException.class, () ->
-            metadataService.extractMetadata(nonExistent, sourceId, "hash")
+            metadataService.extractMetadata(nonExistent, sourceId, "hash", false)
         );
     }
 }

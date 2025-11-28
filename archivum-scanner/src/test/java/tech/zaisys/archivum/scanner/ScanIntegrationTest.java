@@ -75,7 +75,7 @@ class ScanIntegrationTest {
             var batch = new java.util.ArrayList<tech.zaisys.archivum.api.dto.FileDto>();
             for (Path file : files) {
                 String hash = hashService.computeHash(file);
-                var fileDto = metadataService.extractMetadata(file, source.getId(), hash);
+                var fileDto = metadataService.extractMetadata(file, source.getId(), hash, false);
                 batch.add(fileDto);
 
                 if (batch.size() >= 5) {
@@ -169,7 +169,7 @@ class ScanIntegrationTest {
                 // Register hash immediately for future duplicate detection
                 outputService.registerHash(hash);
 
-                var fileDto = metadataService.extractMetadata(file, source.getId(), hash);
+                var fileDto = metadataService.extractMetadata(file, source.getId(), hash, false);
 
                 // Mark as duplicate
                 fileDto.setIsDuplicate(isDuplicate);

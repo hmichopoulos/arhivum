@@ -165,6 +165,9 @@ class OutputServiceTest {
             createTestFile(sourceId, "file1.txt", "hash123")
         );
 
+        // Register hash before writing (as done in ScanCommand)
+        outputService.registerHash("hash123");
+
         FileBatchDto batch = outputService.createBatch(sourceId, files);
 
         // When
@@ -186,6 +189,10 @@ class OutputServiceTest {
             createTestFile(sourceId, "file1.txt", "hash1"),
             createTestFile(sourceId, "file2.txt", "hash2")
         );
+
+        // Register hashes before writing (as done in ScanCommand)
+        outputService.registerHash("hash1");
+        outputService.registerHash("hash2");
 
         FileBatchDto batch = outputService.createBatch(sourceId, files);
         outputService.writeBatch(batch);

@@ -75,8 +75,8 @@ public class OutputService {
 
         objectMapper.writeValue(batchFile.toFile(), batch);
 
-        // Track hashes for duplicate detection
-        batch.getFiles().forEach(file -> knownHashes.add(file.getSha256()));
+        // Note: Hash tracking now happens earlier via registerHash()
+        // to enable intra-batch duplicate detection
 
         log.debug("Wrote batch {} with {} files", batch.getBatchNumber(), batch.getFiles().size());
     }
@@ -94,6 +94,16 @@ public class OutputService {
             .batchNumber(++batchNumber)
             .files(files)
             .build();
+    }
+
+    /**
+     * Register a hash as seen. Call this immediately after computing a hash
+     * to enable intra-batch duplicate detection.
+     *
+     * @param hash SHA-256 hash to register
+     */
+    public void registerHash(String hash) {
+        knownHashes.add(hash);
     }
 
     /**

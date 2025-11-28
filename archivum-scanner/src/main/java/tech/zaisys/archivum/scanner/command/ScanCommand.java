@@ -141,13 +141,17 @@ public class ScanCommand implements Callable<Integer> {
                     // Compute hash
                     String hash = hashService.computeHash(file);
 
+                    // Check if ALREADY exists (before registering)
+                    boolean isDuplicate = outputService.hashExists(hash);
+
+                    // Register hash immediately for future duplicate detection
+                    outputService.registerHash(hash);
+
                     // Extract metadata
                     FileDto fileDto = metadataService.extractMetadata(file, source.getId(), hash);
 
-                    // Check for duplicates
-                    if (outputService.hashExists(hash)) {
-                        fileDto.setIsDuplicate(true);
-                    }
+                    // Mark as duplicate
+                    fileDto.setIsDuplicate(isDuplicate);
 
                     // Add to batch
                     currentBatch.add(fileDto);
@@ -161,12 +165,19 @@ public class ScanCommand implements Callable<Integer> {
                         currentBatch.clear();
                     }
 
-                } catch (Exception e) {
-                    log.error("Failed to process file: {}", file, e);
+                } catch (IOException e) {
+                    log.warn("Cannot read file: {} - {}", file, e.getMessage());
                     errors.add(new OutputService.ScanError(
                         file.toString(),
-                        e.getMessage()
+                        "IO Error: " + (e.getMessage() != null ? e.getMessage() : e.getClass().getSimpleName())
                     ));
+                } catch (RuntimeException e) {
+                    log.error("Unexpected error processing file: {}", file, e);
+                    errors.add(new OutputService.ScanError(
+                        file.toString(),
+                        "Runtime Error: " + (e.getMessage() != null ? e.getMessage() : e.getClass().getSimpleName())
+                    ));
+                    // Let critical errors (OutOfMemoryError, etc.) propagate
                 }
             }
 
@@ -259,7 +270,7 @@ public class ScanCommand implements Callable<Integer> {
      */
     private void writeBatch(OutputService outputService, UUID sourceId, List<FileDto> files)
             throws IOException {
-        FileBatchDto batch = outputService.createBatch(sourceId, new ArrayList<>(files));
+        FileBatchDto batch = outputService.createBatch(sourceId, files);
         outputService.writeBatch(batch);
     }
 }

@@ -1,0 +1,22 @@
+plugins {
+    id 'org.sonarqube' version '4.4.1.3373'
+}
+
+sonarqube {
+    properties {
+        property 'sonar.projectKey', 'arhivum'
+        property 'sonar.projectName', 'Archivum'
+        property 'sonar.host.url', 'http://localhost:9000'
+        property 'sonar.sourceEncoding', 'UTF-8'
+
+        // Multi-module setup
+        property 'sonar.modules', 'archivum-api,archivum-scanner,archivum-server'
+
+        // Java version
+        property 'sonar.java.source', '21'
+        property 'sonar.java.target', '21'
+
+        // Coverage (if you have JaCoCo configured)
+        // property 'sonar.coverage.jacoco.xmlReportPaths', '**/build/reports/jacoco/test/jacocoTestReport.xml'
+    }
+}

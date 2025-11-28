@@ -26,6 +26,46 @@ public class ConfigLoader {
     private static final String ENV_API_KEY = "ARCHIVUM_API_KEY";
     private static final String ENV_OUTPUT_DIR = "ARCHIVUM_OUTPUT_DIR";
 
+    private static final String DEFAULT_CONFIG_YAML = """
+        # Archivum Scanner Configuration
+        # This file configures the scanner behavior
+
+        server:
+          url: "http://localhost:8080"
+          timeout: 30000
+
+        scanner:
+          threads: 0  # 0 = auto-detect CPU count
+          batchSize: 1000
+          skipSystemDirs: true
+          followSymlinks: false
+          excludePatterns:
+            - ".DS_Store"
+            - "Thumbs.db"
+            - "*.tmp"
+            - ".Trash"
+            - "$RECYCLE.BIN"
+
+        copy:
+          enabled: false
+          targetDir: "/staging"
+          threads: 4
+          verifyHash: true
+          skipExisting: true
+
+        dryRun:
+          enabled: true
+          outputDir: "./output"
+
+        metadata:
+          extractExif: true
+          skipDuplicateExif: true
+
+        logging:
+          level: "INFO"
+          file: "./scanner.log"
+        """;
+
     /**
      * Load configuration from default location or environment variable.
      */
@@ -153,102 +193,12 @@ public class ConfigLoader {
             return;
         }
 
-        // Create parent directories
-        Files.createDirectories(configPath.getParent());
+        Path configDir = configPath.getParent();
+        if (configDir != null && !Files.exists(configDir)) {
+            Files.createDirectories(configDir);
+        }
 
-        // Write default configuration
-        String defaultConfig = """
-            # Archivum Scanner Configuration
-
-            # Server connection (not used in MVP dry-run mode)
-            server:
-              url: "https://archivum.local:8080"
-              apiKey: "${ARCHIVUM_API_KEY}"
-              timeout: 30
-              retries: 3
-
-            # Scanner settings
-            scanner:
-              threads: 0  # 0 = auto-detect CPU count
-              batchSize: 1000
-              skipSystemDirs: true
-              followSymlinks: false
-              excludePatterns:
-                - ".Trash"
-                - ".Trashes"
-                - "$RECYCLE.BIN"
-                - "System Volume Information"
-                - ".DS_Store"
-                - "*.tmp"
-                - "*.temp"
-              archivePromptThreshold: 104857600  # 100 MB
-              autoPostponePatterns:
-                - "*.tib"
-                - "*.vhdx"
-                - "*.vmdk"
-
-            # Copy settings
-            copy:
-              enabled: false
-              threads: 4
-              verify: true
-              skipExisting: false
-              flatten: false
-
-            # Dry-run mode (MVP default)
-            dryRun:
-              enabled: true
-              outputDir: "~/.archivum/scans"
-
-            # Metadata extraction
-            metadata:
-              extractExif: true
-              detectMimeType: true
-              exifOptimization: true  # Skip EXIF for duplicate hashes
-
-            # Logging
-            logging:
-              level: INFO  # DEBUG, INFO, WARN, ERROR
-              file: "~/.archivum/scanner.log"
-              console: true
-            """;
-
-        Files.writeString(configPath, defaultConfig);
+        Files.writeString(configPath, DEFAULT_CONFIG_YAML);
         log.info("Created default configuration file: {}", configPath);
-    }
-
-    /**
-     * Merge CLI options into configuration.
-     * CLI options have highest priority and override all other sources.
-     */
-    public static ScannerConfig mergeCliOptions(ScannerConfig config, Map<String, Object> cliOptions) {
-        // Example: threads option from CLI
-        if (cliOptions.containsKey("threads")) {
-            config.getScanner().setThreads((Integer) cliOptions.get("threads"));
-        }
-
-        // Example: batch-size option from CLI
-        if (cliOptions.containsKey("batchSize")) {
-            config.getScanner().setBatchSize((Integer) cliOptions.get("batchSize"));
-        }
-
-        // Example: exclude patterns from CLI
-        if (cliOptions.containsKey("exclude")) {
-            @SuppressWarnings("unchecked")
-            List<String> exclude = (List<String>) cliOptions.get("exclude");
-            config.getScanner().getExcludePatterns().addAll(exclude);
-        }
-
-        // Example: dry-run flag from CLI
-        if (cliOptions.containsKey("dryRun")) {
-            config.getDryRun().setEnabled((Boolean) cliOptions.get("dryRun"));
-        }
-
-        // Example: output-dir from CLI
-        if (cliOptions.containsKey("outputDir")) {
-            config.getDryRun().setOutputDir((String) cliOptions.get("outputDir"));
-        }
-
-        return config;
     }
 }

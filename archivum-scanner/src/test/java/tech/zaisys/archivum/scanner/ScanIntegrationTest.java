@@ -162,15 +162,22 @@ class ScanIntegrationTest {
             int duplicateCount = 0;
             for (Path file : files) {
                 String hash = hashService.computeHash(file);
+
+                // Check if ALREADY exists (before registering)
+                boolean isDuplicate = outputService.hashExists(hash);
+
+                // Register hash immediately for future duplicate detection
+                outputService.registerHash(hash);
+
                 var fileDto = metadataService.extractMetadata(file, source.getId(), hash);
 
-                // Check if duplicate before adding to batch
-                if (outputService.hashExists(hash)) {
-                    fileDto.setIsDuplicate(true);
+                // Mark as duplicate
+                fileDto.setIsDuplicate(isDuplicate);
+                if (isDuplicate) {
                     duplicateCount++;
                 }
 
-                // Write immediately to register hash
+                // Write batch
                 var batch = new java.util.ArrayList<tech.zaisys.archivum.api.dto.FileDto>();
                 batch.add(fileDto);
                 outputService.writeBatch(outputService.createBatch(source.getId(), batch));

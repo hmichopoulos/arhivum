@@ -10,7 +10,6 @@ import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
-import java.util.stream.Stream;
 
 /**
  * Service for walking directory trees and collecting files to scan.
@@ -81,20 +80,6 @@ public class FileWalkerService {
 
         log.info("Found {} files in {}", files.size(), rootPath);
         return files;
-    }
-
-    /**
-     * Walk a directory tree and return a stream of files.
-     * More memory-efficient for large directories.
-     *
-     * @param rootPath Root directory to scan
-     * @return Stream of file paths
-     * @throws IOException if directory cannot be walked
-     */
-    public Stream<Path> walkStream(Path rootPath) throws IOException {
-        return Files.walk(rootPath)
-            .filter(Files::isRegularFile)
-            .filter(path -> !shouldExcludeFile(path));
     }
 
     /**

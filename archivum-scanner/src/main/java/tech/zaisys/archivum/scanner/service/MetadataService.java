@@ -10,6 +10,7 @@ import java.nio.file.Path;
 import java.nio.file.attribute.BasicFileAttributes;
 import java.nio.file.attribute.FileTime;
 import java.time.Instant;
+import java.util.Set;
 import java.util.UUID;
 
 /**
@@ -57,6 +58,7 @@ public class MetadataService {
 
     /**
      * Get file extension from filename.
+     * Supports compound extensions like .tar.gz, .tar.bz2, etc.
      * Returns empty string if no extension.
      *
      * @param fileName File name
@@ -67,7 +69,26 @@ public class MetadataService {
         if (lastDotIndex == -1 || lastDotIndex == fileName.length() - 1 || lastDotIndex == 0) {
             return "";
         }
-        return fileName.substring(lastDotIndex + 1).toLowerCase();
+
+        // Check for compound extensions (e.g., .tar.gz, .tar.bz2)
+        String extension = fileName.substring(lastDotIndex + 1).toLowerCase();
+
+        // List of compression extensions that might be part of compound extensions
+        Set<String> compressionExtensions = Set.of("gz", "bz2", "xz", "zst", "z", "lz", "lzma");
+
+        if (compressionExtensions.contains(extension) && lastDotIndex > 0) {
+            // Look for second-to-last extension
+            int secondLastDotIndex = fileName.lastIndexOf('.', lastDotIndex - 1);
+            if (secondLastDotIndex > 0 && secondLastDotIndex != 0) {
+                String baseExtension = fileName.substring(secondLastDotIndex + 1, lastDotIndex).toLowerCase();
+                // Common compound patterns: tar.*, backup.*, sql.*
+                if (baseExtension.equals("tar") || baseExtension.equals("backup") || baseExtension.equals("sql")) {
+                    return baseExtension + "." + extension;
+                }
+            }
+        }
+
+        return extension;
     }
 
     /**
@@ -128,6 +149,7 @@ public class MetadataService {
 
     /**
      * Check if a file is an archive based on its extension.
+     * Recognizes both simple and compound extensions.
      *
      * @param file Path to the file
      * @return true if archive file, false otherwise
@@ -136,7 +158,9 @@ public class MetadataService {
         String extension = getFileExtension(file.getFileName().toString());
         return switch (extension) {
             case "zip", "tar", "gz", "bz2", "xz", "7z", "rar",
-                 "tgz", "tbz", "txz", "iso", "img", "tib", "bak" -> true;
+                 "tgz", "tbz", "txz", "iso", "img", "tib", "bak",
+                 "tar.gz", "tar.bz2", "tar.xz", "tar.zst",
+                 "backup.gz", "backup.bz2", "sql.gz", "sql.bz2" -> true;
             default -> false;
         };
     }

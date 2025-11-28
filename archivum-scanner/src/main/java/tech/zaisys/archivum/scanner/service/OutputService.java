@@ -13,6 +13,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Instant;
 import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * Service for writing scan results to JSON files (dry-run mode).
@@ -29,7 +30,7 @@ public class OutputService {
     public OutputService(Path outputDir) {
         this.outputDir = outputDir;
         this.objectMapper = createObjectMapper();
-        this.knownHashes = new HashSet<>();
+        this.knownHashes = ConcurrentHashMap.newKeySet();
     }
 
     /**

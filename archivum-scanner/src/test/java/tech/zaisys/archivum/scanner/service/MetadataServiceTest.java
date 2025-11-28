@@ -95,7 +95,7 @@ class MetadataServiceTest {
 
         // Then
         assertEquals("archive.tar.gz", dto.getName());
-        assertEquals("gz", dto.getExtension());
+        assertEquals("tar.gz", dto.getExtension());
     }
 
     @Test

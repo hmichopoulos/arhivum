@@ -34,7 +34,7 @@ class FileWalkerServiceTest {
     @Test
     void walk_emptyDirectory_returnsEmptyList() throws IOException {
         // When
-        List<Path> files = fileWalker.walk(tempDir);
+        List<Path> files = fileWalker.walk(tempDir).files();
 
         // Then
         assertTrue(files.isEmpty());
@@ -47,7 +47,7 @@ class FileWalkerServiceTest {
         Files.createFile(file);
 
         // When
-        List<Path> files = fileWalker.walk(tempDir);
+        List<Path> files = fileWalker.walk(tempDir).files();
 
         // Then
         assertEquals(1, files.size());
@@ -62,7 +62,7 @@ class FileWalkerServiceTest {
         Files.createFile(tempDir.resolve("file3.txt"));
 
         // When
-        List<Path> files = fileWalker.walk(tempDir);
+        List<Path> files = fileWalker.walk(tempDir).files();
 
         // Then
         assertEquals(3, files.size());
@@ -80,7 +80,7 @@ class FileWalkerServiceTest {
         Files.createFile(subdir2.resolve("sub2.txt"));
 
         // When
-        List<Path> files = fileWalker.walk(tempDir);
+        List<Path> files = fileWalker.walk(tempDir).files();
 
         // Then
         assertEquals(3, files.size());
@@ -94,7 +94,7 @@ class FileWalkerServiceTest {
         Files.createFile(tempDir.resolve("file.txt"));
 
         // When
-        List<Path> files = fileWalker.walk(tempDir);
+        List<Path> files = fileWalker.walk(tempDir).files();
 
         // Then
         assertEquals(1, files.size());
@@ -114,7 +114,7 @@ class FileWalkerServiceTest {
         Files.createFile(tempDir.resolve("normal.txt"));
 
         // When
-        List<Path> files = fileWalker.walk(tempDir);
+        List<Path> files = fileWalker.walk(tempDir).files();
 
         // Then
         assertEquals(1, files.size());
@@ -132,7 +132,7 @@ class FileWalkerServiceTest {
         Files.createFile(trash.resolve("deleted.txt"));
 
         // When
-        List<Path> files = fileWalker.walk(tempDir);
+        List<Path> files = fileWalker.walk(tempDir).files();
 
         // Then
         assertEquals(1, files.size());
@@ -149,7 +149,7 @@ class FileWalkerServiceTest {
         Files.createFile(tempDir.resolve(".DS_Store"));
 
         // When
-        List<Path> files = fileWalker.walk(tempDir);
+        List<Path> files = fileWalker.walk(tempDir).files();
 
         // Then
         assertEquals(1, files.size());
@@ -168,7 +168,7 @@ class FileWalkerServiceTest {
         Files.createFile(tempDir.resolve("debug.log"));
 
         // When
-        List<Path> files = fileWalker.walk(tempDir);
+        List<Path> files = fileWalker.walk(tempDir).files();
 
         // Then
         assertEquals(1, files.size());
@@ -182,7 +182,7 @@ class FileWalkerServiceTest {
         Files.createFile(accessible);
 
         // When
-        List<Path> files = fileWalker.walk(tempDir);
+        List<Path> files = fileWalker.walk(tempDir).files();
 
         // Then - should not throw, should continue
         assertTrue(files.contains(accessible));
@@ -210,7 +210,7 @@ class FileWalkerServiceTest {
         Files.createFile(tempDir.resolve("file.txt"));
 
         // When
-        List<Path> files = fileWalker.walk(tempDir);
+        List<Path> files = fileWalker.walk(tempDir).files();
 
         // Then
         assertEquals(1, files.size());
@@ -227,7 +227,7 @@ class FileWalkerServiceTest {
         Files.createFile(deep.resolve("deep-file.txt"));
 
         // When
-        List<Path> files = fileWalker.walk(tempDir);
+        List<Path> files = fileWalker.walk(tempDir).files();
 
         // Then
         assertEquals(1, files.size());
@@ -240,7 +240,7 @@ class FileWalkerServiceTest {
         Path nonExistent = tempDir.resolve("does-not-exist");
 
         // When
-        List<Path> files = fileWalker.walk(nonExistent);
+        List<Path> files = fileWalker.walk(nonExistent).files();
 
         // Then - should handle gracefully and return empty list
         assertTrue(files.isEmpty());

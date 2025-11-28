@@ -57,7 +57,7 @@ class ScanIntegrationTest {
             OutputService outputService = new OutputService(outputDir);
 
             // Discover files
-            List<Path> files = fileWalker.walk(scanDir);
+            List<Path> files = fileWalker.walk(scanDir).files();
             totalFiles = files.size();
 
             // Create source
@@ -148,7 +148,7 @@ class ScanIntegrationTest {
             MetadataService metadataService = new MetadataService();
             OutputService outputService = new OutputService(outputDir);
 
-            List<Path> files = fileWalker.walk(scanDir);
+            List<Path> files = fileWalker.walk(scanDir).files();
 
             SourceDto source = SourceDto.builder()
                 .id(java.util.UUID.randomUUID())

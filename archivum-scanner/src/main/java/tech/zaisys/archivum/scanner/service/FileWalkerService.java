@@ -18,6 +18,11 @@ import java.util.Set;
 @Slf4j
 public class FileWalkerService {
 
+    /**
+     * Result of a directory walk containing files and total size.
+     */
+    public record WalkResult(List<Path> files, long totalSize) {}
+
     private static final Set<String> SYSTEM_DIRECTORIES = Set.of(
         ".Trash",
         ".Trashes",
@@ -38,13 +43,15 @@ public class FileWalkerService {
 
     /**
      * Walk a directory tree and collect all regular files.
+     * Calculates total size during the walk for memory efficiency.
      *
      * @param rootPath Root directory to scan
-     * @return List of file paths
+     * @return WalkResult containing files and total size
      * @throws IOException if directory cannot be walked
      */
-    public List<Path> walk(Path rootPath) throws IOException {
+    public WalkResult walk(Path rootPath) throws IOException {
         List<Path> files = new ArrayList<>();
+        long[] totalSize = {0L}; // Use array to allow modification in lambda
 
         FileVisitor<Path> visitor = new SimpleFileVisitor<>() {
             @Override
@@ -60,6 +67,7 @@ public class FileWalkerService {
             public FileVisitResult visitFile(Path file, BasicFileAttributes attrs) {
                 if (attrs.isRegularFile() && !shouldExcludeFile(file)) {
                     files.add(file);
+                    totalSize[0] += attrs.size();
                 }
                 return FileVisitResult.CONTINUE;
             }
@@ -78,8 +86,8 @@ public class FileWalkerService {
 
         Files.walkFileTree(rootPath, options, Integer.MAX_VALUE, visitor);
 
-        log.info("Found {} files in {}", files.size(), rootPath);
-        return files;
+        log.info("Found {} files ({} bytes) in {}", files.size(), totalSize[0], rootPath);
+        return new WalkResult(files, totalSize[0]);
     }
 
     /**
@@ -141,6 +149,6 @@ public class FileWalkerService {
      * @throws IOException if directory cannot be walked
      */
     public long countFiles(Path rootPath) throws IOException {
-        return walk(rootPath).size();
+        return walk(rootPath).files().size();
     }
 }

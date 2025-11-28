@@ -115,15 +115,14 @@ public class ScanCommand implements Callable<Integer> {
 
             // Discover files
             System.out.println("Discovering files...");
-            List<Path> files = fileWalker.walk(scanPath);
+            FileWalkerService.WalkResult walkResult = fileWalker.walk(scanPath);
+            List<Path> files = walkResult.files();
+            long totalSize = walkResult.totalSize();
 
             if (files.isEmpty()) {
                 System.out.println("No files found to scan.");
                 return 0;
             }
-
-            // Calculate total size
-            long totalSize = calculateTotalSize(files);
 
             // Initialize progress reporter
             ProgressReporter progress = new ProgressReporter(
@@ -248,21 +247,6 @@ public class ScanCommand implements Callable<Integer> {
             .scanStartedAt(Instant.now())
             .postponed(false)
             .build();
-    }
-
-    /**
-     * Calculate total size of all files.
-     */
-    private long calculateTotalSize(List<Path> files) {
-        long total = 0;
-        for (Path file : files) {
-            try {
-                total += Files.size(file);
-            } catch (IOException e) {
-                log.warn("Cannot get size of: {}", file);
-            }
-        }
-        return total;
     }
 
     /**

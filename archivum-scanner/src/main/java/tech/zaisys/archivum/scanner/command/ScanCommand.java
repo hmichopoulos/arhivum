@@ -235,11 +235,20 @@ public class ScanCommand implements Callable<Integer> {
 
             // Print results
             System.out.println();
-            System.out.println("Output directory: " + outputPath.toAbsolutePath());
+            System.out.println("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+            System.out.println("Results saved to:");
+            System.out.println("  " + outputPath.toAbsolutePath().resolve(source.getId().toString()));
+            System.out.println();
+            System.out.println("Quick access:");
+            System.out.println("  Source info:   " + outputPath.toAbsolutePath().resolve(source.getId().toString()).resolve("source.json"));
+            System.out.println("  File data:     " + outputPath.toAbsolutePath().resolve(source.getId().toString()).resolve("files/"));
+            System.out.println("  Summary:       " + outputPath.toAbsolutePath().resolve(source.getId().toString()).resolve("summary.json"));
+            System.out.println("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
 
             if (!errors.isEmpty()) {
-                System.out.println("Warnings: " + errors.size() + " files could not be processed");
-                System.out.println("See summary.json for details");
+                System.out.println();
+                System.out.println("⚠ Warnings: " + errors.size() + " files could not be processed");
+                System.out.println("  See summary.json for details");
             }
 
             return 0;

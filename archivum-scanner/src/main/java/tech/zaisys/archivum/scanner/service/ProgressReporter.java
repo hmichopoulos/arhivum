@@ -47,6 +47,39 @@ public class ProgressReporter {
     }
 
     /**
+     * Update progress while hashing a large file.
+     * Shows within-file progress (e.g., "45.2 GB / 489 GB").
+     *
+     * @param currentFile Path of current file being hashed
+     * @param bytesProcessed Bytes processed so far in this file
+     * @param fileSize Total size of the file
+     */
+    public void updateFileProgress(String currentFile, long bytesProcessed, long fileSize) {
+        state.currentFile = currentFile;
+
+        // Update display
+        long currentTime = System.currentTimeMillis();
+        if (currentTime - lastUpdateTime >= UPDATE_INTERVAL_MS) {
+            displayFileProgress(bytesProcessed, fileSize);
+            lastUpdateTime = currentTime;
+        }
+    }
+
+    /**
+     * Display within-file progress for large files.
+     */
+    private void displayFileProgress(long bytesProcessed, long fileSize) {
+        double percent = fileSize > 0 ? (bytesProcessed * 100.0 / fileSize) : 0;
+
+        System.out.print(String.format("\rHashing: %s (%s / %s - %.1f%%)...",
+            truncate(state.currentFile, 40),
+            formatBytes(bytesProcessed),
+            formatBytes(fileSize),
+            percent));
+        System.out.flush();
+    }
+
+    /**
      * Report scan completion.
      */
     public void complete() {

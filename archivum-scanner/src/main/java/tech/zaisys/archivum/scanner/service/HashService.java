@@ -16,12 +16,29 @@ import java.util.concurrent.Executors;
  * Service for computing SHA-256 hashes of files.
  * Uses streaming to avoid loading large files into memory.
  * Supports parallel hashing using a thread pool.
+ * Supports progress callbacks for large files.
  */
 @Slf4j
 public class HashService implements AutoCloseable {
 
     private static final String HASH_ALGORITHM = "SHA-256";
     private static final int BUFFER_SIZE = 8192; // 8 KB
+    private static final long PROGRESS_INTERVAL_BYTES = 100 * 1024 * 1024; // Report every 100 MB
+
+    /**
+     * Callback interface for hash progress updates.
+     * Called periodically while hashing large files.
+     */
+    @FunctionalInterface
+    public interface ProgressCallback {
+        /**
+         * Called when progress is made hashing a file.
+         *
+         * @param bytesProcessed Number of bytes processed so far
+         * @param totalBytes Total size of the file
+         */
+        void onProgress(long bytesProcessed, long totalBytes);
+    }
 
     private final ExecutorService executor;
 
@@ -39,8 +56,25 @@ public class HashService implements AutoCloseable {
      * @throws IOException if file cannot be read
      */
     public String computeHash(Path file) throws IOException {
+        return computeHash(file, null);
+    }
+
+    /**
+     * Compute SHA-256 hash of a file synchronously with progress callback.
+     * Uses streaming to avoid loading the entire file into memory.
+     * Reports progress every 100 MB for files larger than 100 MB.
+     *
+     * @param file Path to the file
+     * @param progressCallback Optional callback for progress updates (can be null)
+     * @return SHA-256 hash as lowercase hex string
+     * @throws IOException if file cannot be read
+     */
+    public String computeHash(Path file, ProgressCallback progressCallback) throws IOException {
         try {
             MessageDigest digest = MessageDigest.getInstance(HASH_ALGORITHM);
+            long fileSize = Files.size(file);
+            long bytesProcessed = 0;
+            long lastReportedBytes = 0;
 
             try (InputStream is = Files.newInputStream(file)) {
                 byte[] buffer = new byte[BUFFER_SIZE];
@@ -48,6 +82,20 @@ public class HashService implements AutoCloseable {
 
                 while ((bytesRead = is.read(buffer)) != -1) {
                     digest.update(buffer, 0, bytesRead);
+                    bytesProcessed += bytesRead;
+
+                    // Report progress every PROGRESS_INTERVAL_BYTES for large files
+                    if (progressCallback != null && fileSize > PROGRESS_INTERVAL_BYTES) {
+                        if (bytesProcessed - lastReportedBytes >= PROGRESS_INTERVAL_BYTES) {
+                            progressCallback.onProgress(bytesProcessed, fileSize);
+                            lastReportedBytes = bytesProcessed;
+                        }
+                    }
+                }
+
+                // Final progress update
+                if (progressCallback != null && fileSize > PROGRESS_INTERVAL_BYTES) {
+                    progressCallback.onProgress(fileSize, fileSize);
                 }
             }
 

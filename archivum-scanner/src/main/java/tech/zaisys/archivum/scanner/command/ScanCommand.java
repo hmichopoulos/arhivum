@@ -168,8 +168,10 @@ public class ScanCommand implements Callable<Integer> {
 
             for (Path file : files) {
                 try {
-                    // Compute hash
-                    String hash = hashService.computeHash(file);
+                    // Compute hash with progress callback for large files
+                    String hash = hashService.computeHash(file, (bytesProcessed, totalBytes) -> {
+                        progress.updateFileProgress(file.toString(), bytesProcessed, totalBytes);
+                    });
 
                     // Check if ALREADY exists (before registering)
                     boolean isDuplicate = outputService.hashExists(hash);

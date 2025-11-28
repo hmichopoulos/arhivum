@@ -354,27 +354,125 @@ npm run dev
 
 ```
 docs/
-├── CLAUDE.md                    # This file
+├── README.md                    # Documentation index
 ├── PROJECT.md                   # High-level overview
-├── architecture/
-│   ├── OVERVIEW.md              # System architecture
+├── scanner/                     # Scanner-specific docs
+│   ├── README.md
+│   ├── REQUIREMENTS.md          # Scanner functional requirements
+│   ├── DESIGN.md                # Scanner architecture
+│   └── SCANNER_AGENT.md         # Detailed scanner specification
+├── server/                      # Server-specific docs
+│   ├── README.md
 │   ├── DATABASE.md              # Schema design
-│   └── DEPLOYMENT.md            # Deployment guide
-├── requirements/
-│   ├── FOLDER_STRUCTURE.md      # Target taxonomy
-│   ├── SCANNING.md              # Scanning behavior
-│   ├── DEDUPLICATION.md         # Dedup logic
-│   ├── CLASSIFICATION.md        # Classification rules
-│   └── MIGRATION.md             # Migration workflow
-└── agents/
-    ├── SCANNER_AGENT.md         # Scanner CLI
-    ├── DEDUP_AGENT.md           # Deduplication logic
-    ├── CLASSIFIER_AGENT.md      # Classification logic
-    └── MIGRATOR_AGENT.md        # Migration logic
+│   └── API.md                   # REST and WebSocket API
+└── shared/                      # Shared concepts
+    ├── README.md
+    ├── OVERVIEW.md              # System architecture
+    ├── FOLDER_STRUCTURE.md      # Target taxonomy
+    └── DEDUPLICATION.md         # Dedup logic
 ```
+
+## Development Workflow
+
+### Planning & Tracking
+
+We use a **milestone-based workflow** with persistent progress tracking in **PLAN.md** (repo root).
+
+**PLAN.md contains:**
+- Current milestone with progress percentage
+- Completed milestones with links to PRs
+- Upcoming milestones with estimates
+- Future work roadmap
+
+**Before starting work:**
+1. Check PLAN.md for current milestone
+2. I communicate what I'm going to do in this PR (scope, changes, acceptance criteria)
+3. Create feature branch
+4. Implement, test, update PLAN.md progress
+5. Create PR
+6. You review & merge
+7. Pull main, update PLAN.md status
+8. Loop back to step 1
+
+### Branch Naming Conventions
+
+- `feature/milestone-X-name` - Feature implementation
+  - Example: `feature/milestone-2-core-scanning`
+- `docs/topic` - Documentation updates
+  - Example: `docs/scanner-requirements`
+- `fix/issue-description` - Bug fixes
+  - Example: `fix/hash-computation-error`
+
+### PR Requirements
+
+Each PR must include:
+- **Clear scope** - What's included, what's not
+- **Tests** - Unit tests for new code (>80% coverage target)
+- **Updated PLAN.md** - Current milestone progress
+- **Passing build** - All tests must pass: `./gradlew build`
+- **Clear description** - Link to PLAN.md section
+
+### Milestone Structure
+
+Each milestone is:
+- **~8-10 hours of work** - Manageable in 1-2 days of focused work
+- **Focused scope** - Related functionality grouped together
+- **Clear acceptance criteria** - Specific, testable outcomes
+- **One PR** - May include multiple commits, but one cohesive PR
+
+**Example Milestones:**
+- Milestone 1: Documentation Foundation (6h)
+- Milestone 2: Foundation & Core Scanning (10h)
+- Milestone 3: Advanced Metadata (8h)
+
+### Retrospectives
+
+After every 2-3 milestones, we do a quick retrospective:
+- **What went well?** - Celebrate successes
+- **What could improve?** - Identify friction points
+- **Adjust workflow if needed** - Adapt based on what we learn
+
+### Work Communication
+
+**At the start of each PR:**
+I communicate clearly what I'm going to do:
+- **Scope:** What features/components I'll build
+- **Acceptance Criteria:** How we'll know it's done
+- **Estimated Time:** How long I expect it to take
+- **Dependencies:** What needs to be done first (if any)
+
+**During work:**
+- Update PLAN.md progress as I complete tasks
+- Communicate if I encounter unexpected complexity
+- Ask questions if requirements are unclear
+
+**At PR creation:**
+- Clear description of changes
+- Link to PLAN.md section
+- Highlight any deviations from plan
+- Note any follow-up work needed
+
+### Quality Standards
+
+Before submitting PR:
+- ✅ All tests pass (`./gradlew build`)
+- ✅ Code follows conventions (see above)
+- ✅ No compiler warnings
+- ✅ Test coverage >80% for new code
+- ✅ PLAN.md updated with progress
+- ✅ Commit messages are clear and descriptive
+
+### Merge & Continue
+
+After PR is merged:
+1. Pull main: `git checkout main && git pull`
+2. Update PLAN.md to mark milestone complete
+3. Check PLAN.md for next milestone
+4. Start new cycle
 
 ## Getting Help
 
 - Check existing documentation in `/docs/`
+- Check **PLAN.md** for current priorities and context
 - Review similar code in the codebase
 - Ask the user for clarification on requirements

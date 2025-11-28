@@ -64,7 +64,7 @@ public class MetadataService {
      */
     private String getFileExtension(String fileName) {
         int lastDotIndex = fileName.lastIndexOf('.');
-        if (lastDotIndex == -1 || lastDotIndex == fileName.length() - 1) {
+        if (lastDotIndex == -1 || lastDotIndex == fileName.length() - 1 || lastDotIndex == 0) {
             return "";
         }
         return fileName.substring(lastDotIndex + 1).toLowerCase();

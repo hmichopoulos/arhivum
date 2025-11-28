@@ -1,0 +1,5 @@
+rootProject.name = 'arhivum'
+
+include 'archivum-api'
+include 'archivum-scanner'
+include 'archivum-server'

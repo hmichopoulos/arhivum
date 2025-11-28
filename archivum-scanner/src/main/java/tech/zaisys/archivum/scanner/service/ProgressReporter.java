@@ -52,6 +52,7 @@ public class ProgressReporter {
     public void complete() {
         state.completed = true;
         displayProgress();
+        System.out.println(); // Move to next line after progress
         System.out.println();
         System.out.println("Scan complete!");
         displaySummary();
@@ -59,17 +60,9 @@ public class ProgressReporter {
 
     /**
      * Display current progress to console.
+     * Uses single-line updates with \r for compatibility with plain console mode.
      */
     private void displayProgress() {
-        // Clear previous lines (ANSI escape codes)
-        if (state.processedFiles > 1) {
-            System.out.print("\033[6A\033[J"); // Move up 6 lines and clear to end
-        }
-
-        System.out.println("Scanning: " + state.sourceName);
-        System.out.println();
-
-        // Progress
         double filesPercent = state.totalFiles > 0
             ? (state.processedFiles * 100.0 / state.totalFiles)
             : 0;
@@ -77,26 +70,21 @@ public class ProgressReporter {
             ? (state.processedSize * 100.0 / state.totalSize)
             : 0;
 
-        System.out.printf("Progress:%n");
-        System.out.printf("  Files:  %,d / %,d (%.1f%%)%n",
-            state.processedFiles, state.totalFiles, filesPercent);
-        System.out.printf("  Size:   %s / %s (%.1f%%)%n",
-            formatBytes(state.processedSize),
-            formatBytes(state.totalSize),
-            sizePercent);
-
-        // Speed
+        // Calculate speed
         long elapsedSeconds = Duration.between(state.startTime, Instant.now()).getSeconds();
+        String speedInfo = "";
         if (elapsedSeconds > 0) {
             long filesPerSec = state.processedFiles / elapsedSeconds;
             long bytesPerSec = state.processedSize / elapsedSeconds;
-            System.out.printf("  Speed:  %d files/sec, %s/sec%n",
-                filesPerSec, formatBytes(bytesPerSec));
+            speedInfo = String.format(" @ %,d files/sec, %s/sec", filesPerSec, formatBytes(bytesPerSec));
         }
 
-        // Current file
-        System.out.println();
-        System.out.println("Current: " + truncate(state.currentFile, 60));
+        // Single-line progress update (works in plain console mode)
+        System.out.print(String.format("\rScanning: %,d/%,d files (%.1f%%) | %s/%s (%.1f%%)%s",
+            state.processedFiles, state.totalFiles, filesPercent,
+            formatBytes(state.processedSize), formatBytes(state.totalSize), sizePercent,
+            speedInfo));
+        System.out.flush();
     }
 
     /**

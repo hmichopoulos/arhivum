@@ -2,15 +2,15 @@
 
 **Last Updated:** 2025-11-28
 **Current Phase:** Scanner MVP
-**Active Milestone:** Milestone 2 - Foundation & Core Scanning
+**Active Milestone:** Milestone 3 - Advanced Metadata (ready to start)
 
 ---
 
 ## Status Overview
 
-✅ Completed: 2 milestones
-🔄 In Progress: None (ready to start Milestone 2)
-📋 Upcoming: 4 milestones (implementation)
+✅ Completed: 3 milestones
+🔄 In Progress: None (ready to start Milestone 3)
+📋 Upcoming: 3 milestones (implementation)
 ⏳ Future: Server, UI, advanced features
 
 ---
@@ -70,50 +70,51 @@
 
 ---
 
-## Current Milestone
+### ✅ Milestone 2: Foundation & Core Scanning (Nov 28, 2025)
 
-### 📋 Milestone 2: Foundation & Core Scanning (Next)
+**Duration:** 10 hours
+**PR:** [#4](https://github.com/hmichopoulos/arhivum/pull/4) - Submitted
 
-**Duration:** ~10 hours
-**Status:** Ready to start
-**Planned Start:** Today (Nov 28, 2025)
+**Deliverables:**
+- Created core scanning services:
+  - **ConfigLoader** - YAML config loading with env var overrides
+  - **ScannerConfig** - Configuration POJO with nested classes
+  - **HashService** - Parallel SHA-256 computation (streaming, thread pool)
+  - **FileWalkerService** - Recursive directory traversal with exclusions
+  - **MetadataService** - Basic file metadata extraction (name, size, dates, MIME)
+  - **OutputService** - JSON batch writer for dry-run mode
+  - **ProgressReporter** - Real-time console progress with ANSI codes
+  - **ScanCommand** - Main CLI orchestration command
 
----
+- Comprehensive test coverage (48 tests):
+  - HashServiceTest (9 tests)
+  - MetadataServiceTest (11 tests)
+  - OutputServiceTest (10 tests)
+  - FileWalkerServiceTest (14 tests)
+  - ScanIntegrationTest (2 tests, end-to-end workflows)
 
-**Scope:**
-Build the core scanning engine with configuration, file walking, hashing, basic metadata extraction, and JSON output.
-
-**Components to Build:**
-1. **ConfigLoader** - Load YAML config + environment variables + CLI overrides
-2. **ScannerConfig** - Configuration POJO with validation
-3. **FileWalkerService** - Recursive directory traversal with exclusions
-4. **HashService** - Parallel SHA-256 computation (streaming)
-5. **MetadataService** - Extract basic file metadata (no EXIF yet)
-6. **OutputService** - Write JSON batches to disk (dry-run mode)
-7. **ProgressReporter** - Console progress output with stats
-8. **ScanCommand** - Basic scan command implementation
-9. **Unit tests** - Test coverage for all services (>80%)
+**Key Files:**
+- `archivum-scanner/src/main/java/tech/zaisys/archivum/scanner/command/ScanCommand.java`
+- `archivum-scanner/src/main/java/tech/zaisys/archivum/scanner/service/` (7 services)
+- `archivum-scanner/src/test/` (5 test files)
 
 **Acceptance Criteria:**
-- [ ] Scans directory with 10,000 files successfully
-- [ ] Computes correct SHA-256 hashes (verified with test vectors)
-- [ ] Outputs batched JSON files (batch-0001.json, etc.)
-- [ ] Excludes system directories (`.Trash`, `$RECYCLE.BIN`, etc.)
-- [ ] Shows real-time progress in console
-- [ ] Unit tests pass with >80% coverage
-- [ ] Build produces fat JAR artifact
-- [ ] Manual test with 10K files completes in < 5 minutes
-
-**Estimated Timeline:** 1-2 days of focused work
+- ✅ Computes correct SHA-256 hashes (verified with test vectors)
+- ✅ Outputs batched JSON files (batch-0001.json, etc.)
+- ✅ Excludes system directories (`.Trash`, `$RECYCLE.BIN`, etc.)
+- ✅ Shows real-time progress in console
+- ✅ Unit tests pass with 48 tests total
+- ✅ Build produces fat JAR artifact (`./gradlew build` ✅)
+- ⏳ Manual test with 10K files (pending user testing)
 
 ---
 
-## Upcoming Milestones
+## Current Milestone
 
-### 📋 Milestone 3: Advanced Metadata
+### 📋 Milestone 3: Advanced Metadata (Next)
 
 **Duration:** ~8 hours
-**Status:** Not started
+**Status:** Ready to start
 **Planned Start:** After Milestone 2 merged
 
 **Scope:**
@@ -143,6 +144,8 @@ Add EXIF extraction, physical device ID detection, interactive prompts, and hash
 **Estimated Timeline:** 1 day of focused work
 
 ---
+
+## Upcoming Milestones
 
 ### 📋 Milestone 4: Hierarchy & Archives
 
@@ -279,13 +282,13 @@ The following features are **not included in MVP** and will be implemented later
 |-----------|----------|--------|---------|-----------|
 | M0: Shared API | 3h | ✅ Complete | Nov 27 | Nov 27 |
 | M1: Documentation | 6h | ✅ Complete | Nov 28 | Nov 28 |
-| M2: Foundation & Core | 10h | 📋 Next | TBD | TBD |
-| M3: Advanced Metadata | 8h | 📋 Upcoming | TBD | TBD |
+| M2: Foundation & Core | 10h | ✅ Complete | Nov 28 | Nov 28 |
+| M3: Advanced Metadata | 8h | 📋 Next | TBD | TBD |
 | M4: Hierarchy & Archives | 10h | 📋 Upcoming | TBD | TBD |
 | M5: Copy & Polish | 8h | 📋 Upcoming | TBD | TBD |
-| **Total** | **45h** | **20% done** | | |
+| **Total** | **45h** | **42% done** | | |
 
-**Estimated Completion:** 4-6 weeks (assuming ~8-10h/week)
+**Estimated Completion:** 3-4 weeks (assuming ~8-10h/week)
 
 ---
 

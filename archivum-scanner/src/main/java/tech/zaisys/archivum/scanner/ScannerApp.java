@@ -2,6 +2,7 @@ package tech.zaisys.archivum.scanner;
 
 import picocli.CommandLine;
 import picocli.CommandLine.Command;
+import tech.zaisys.archivum.scanner.command.ScanCommand;
 
 /**
  * Main entry point for the Archivum Scanner CLI application.
@@ -15,6 +16,7 @@ import picocli.CommandLine.Command;
     description = "Scan filesystems and send metadata to Archivum server",
     mixinStandardHelpOptions = true,
     subcommands = {
+        ScanCommand.class,
         CommandLine.HelpCommand.class
     }
 )

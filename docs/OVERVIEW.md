@@ -135,7 +135,7 @@
 
 ```
 archivum-scanner/
-├── src/main/java/com/archivum/scanner/
+├── src/main/java/tech/zaisys/archivum/scanner/
 │   ├── ScannerApp.java              # CLI entry point
 │   ├── ScanCommand.java             # Scan command implementation
 │   ├── CopyCommand.java             # Copy to staging command
@@ -148,7 +148,8 @@ archivum-scanner/
 │   │   └── ServerClient.java        # REST client for server
 │   └── config/
 │       └── ScannerConfig.java       # Configuration (server URL, etc.)
-└── pom.xml
+├── build.gradle
+└── gradle/wrapper/...
 ```
 
 ### archivum-server
@@ -175,7 +176,7 @@ archivum-scanner/
 
 ```
 archivum-server/
-├── src/main/java/com/archivum/
+├── src/main/java/tech/zaisys/archivum/server/
 │   ├── ArchivumServerApplication.java
 │   ├── api/
 │   │   ├── controller/
@@ -228,7 +229,8 @@ archivum-server/
 │   └── db/migration/
 │       ├── V001__initial_schema.sql
 │       └── ...
-└── pom.xml
+├── build.gradle
+└── gradle/wrapper/...
 ```
 
 ### archivum-ui

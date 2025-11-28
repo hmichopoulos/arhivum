@@ -30,11 +30,22 @@ public class InteractivePrompt {
         String defaultName = sanitizeVolumeName(volumeLabel);
 
         System.out.println();
+        System.out.println("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
         System.out.println("Detected Volume: " + (volumeLabel != null ? volumeLabel : "(unknown)"));
-        System.out.print("Enter logical name [" + defaultName + "]: ");
+        System.out.println();
+        System.out.println("Enter a logical name for this source (e.g., 'WD-4TB-Blue')");
+        System.out.println("Press ENTER to accept default: [" + defaultName + "]");
+        System.out.println();
+        System.out.print("> ");
+        System.out.flush();
 
         String input = readLine();
-        return input.isEmpty() ? defaultName : input.trim();
+        String result = input.isEmpty() ? defaultName : input.trim();
+
+        System.out.println("✓ Source name: " + result);
+        System.out.println();
+
+        return result;
     }
 
     /**
@@ -44,10 +55,23 @@ public class InteractivePrompt {
      * @return Physical label or null
      */
     public String promptForPhysicalLabel() {
-        System.out.print("Enter physical label (sticker on disk) [leave empty if none]: ");
+        System.out.println("Enter physical label (sticker on disk)");
+        System.out.println("Press ENTER to skip (optional)");
+        System.out.println();
+        System.out.print("> ");
+        System.out.flush();
 
         String input = readLine();
-        return input.isEmpty() ? null : input.trim();
+        String result = input.isEmpty() ? null : input.trim();
+
+        if (result != null) {
+            System.out.println("✓ Physical label: " + result);
+        } else {
+            System.out.println("✓ Physical label: (none)");
+        }
+        System.out.println();
+
+        return result;
     }
 
     /**
@@ -57,10 +81,24 @@ public class InteractivePrompt {
      * @return Notes or null
      */
     public String promptForNotes() {
-        System.out.print("Enter notes (optional): ");
+        System.out.println("Enter notes about this source (optional)");
+        System.out.println("Press ENTER to skip");
+        System.out.println();
+        System.out.print("> ");
+        System.out.flush();
 
         String input = readLine();
-        return input.isEmpty() ? null : input.trim();
+        String result = input.isEmpty() ? null : input.trim();
+
+        if (result != null) {
+            System.out.println("✓ Notes: " + result);
+        } else {
+            System.out.println("✓ Notes: (none)");
+        }
+        System.out.println("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+        System.out.println();
+
+        return result;
     }
 
     /**

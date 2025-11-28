@@ -156,15 +156,13 @@ public class InteractivePrompt {
 
     /**
      * Close the reader (call when done with prompts).
-     * Note: System.console() doesn't need to be closed.
+     * Note: We don't actually close System.in or System.console() as they
+     * are system resources managed by the JVM, not by our application.
+     * Closing them can cause "Broken pipe" errors with Gradle.
      */
     public void close() {
-        try {
-            if (console == null) {
-                reader.close();
-            }
-        } catch (IOException e) {
-            log.debug("Error closing reader: {}", e.getMessage());
-        }
+        // Do nothing - System.in and System.console() should not be closed
+        // by application code. They are owned by the system/JVM.
+        log.debug("InteractivePrompt closed (System.in left open for system)");
     }
 }

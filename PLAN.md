@@ -2,14 +2,14 @@
 
 **Last Updated:** 2025-11-28
 **Current Phase:** Scanner MVP
-**Active Milestone:** Milestone 1 - Documentation (95% complete)
+**Active Milestone:** Milestone 2 - Foundation & Core Scanning
 
 ---
 
 ## Status Overview
 
-✅ Completed: 1 milestone
-🔄 In Progress: Milestone 1 (final touches)
+✅ Completed: 2 milestones
+🔄 In Progress: None (ready to start Milestone 2)
 📋 Upcoming: 4 milestones (implementation)
 ⏳ Future: Server, UI, advanced features
 
@@ -20,7 +20,7 @@
 ### ✅ Milestone 0: Shared API Module (Nov 27, 2025)
 
 **Duration:** 3 hours
-**PR:** [#2](https://github.com/user/arhivum/pull/2) - Merged
+**PR:** [#2](https://github.com/hmichopoulos/arhivum/pull/2) - Merged
 
 **Deliverables:**
 - Created `archivum-api` module with Java library configuration
@@ -40,57 +40,45 @@
 
 ---
 
-## Current Milestone
+### ✅ Milestone 1: Documentation Foundation (Nov 28, 2025)
 
-### 🔄 Milestone 1: Documentation Foundation (Nov 28, 2025)
-
-**Duration:** 6 hours (5.5h done, 0.5h remaining)
-**Status:** 95% complete
-**Branch:** `docs/initial-setup` (to be created)
-**PR:** To be submitted
-
-**Scope:**
-Complete documentation infrastructure including requirements, design, implementation specs, and workflow.
-
-**Progress:**
-
-#### ✅ Completed (5.5h)
-- [x] Reorganized docs/ structure into `scanner/`, `server/`, `shared/`
-- [x] Moved existing docs to appropriate locations
-- [x] Created README.md in each docs subfolder
-- [x] **docs/scanner/REQUIREMENTS.md** (comprehensive, 12 functional requirements)
-- [x] **docs/scanner/DESIGN.md** (architecture, 11 core components, data flow)
-- [x] **docs/scanner/SCANNER_AGENT.md** (complete implementation specification)
-- [x] **docs/server/API.md** (REST endpoints, WebSocket, rate limiting)
-
-#### ⏳ Remaining (0.5h)
-- [ ] Create **PLAN.md** in repo root (this file)
-- [ ] Update **CLAUDE.md** with workflow section
-- [ ] Submit PR with all documentation
+**Duration:** 6 hours
+**PR:** [#3](https://github.com/hmichopoulos/arhivum/pull/3) - Merged
 
 **Deliverables:**
-1. Reorganized documentation structure
-2. Comprehensive scanner requirements and design docs
-3. Detailed implementation specification (SCANNER_AGENT.md)
-4. Server API documentation
-5. Development workflow documented in CLAUDE.md
-6. PLAN.md for tracking progress
+- Reorganized docs/ structure into `scanner/`, `server/`, `shared/`
+- Created README.md in each docs subfolder
+- **docs/scanner/REQUIREMENTS.md** (3,500 words, 12 functional requirements)
+- **docs/scanner/DESIGN.md** (4,000 words, 11 core components)
+- **docs/scanner/SCANNER_AGENT.md** (7,000 words, complete implementation spec)
+- **docs/server/API.md** (3,000 words, REST endpoints, WebSocket)
+- **PLAN.md** - High-level roadmap with milestone tracking
+- **CLAUDE.md** - Updated with development workflow section
+
+**Key Files:**
+- `PLAN.md`
+- `CLAUDE.md` (workflow section)
+- `docs/scanner/` (4 new docs)
+- `docs/server/` (2 new docs)
+- `docs/shared/` (4 docs, 3 moved)
 
 **Acceptance Criteria:**
-- [x] All documentation is comprehensive and clear
-- [x] PLAN.md accurately tracks current status
-- [ ] CLAUDE.md includes workflow section
-- [ ] PR submitted and ready for review
+- ✅ All documentation is comprehensive and clear
+- ✅ PLAN.md accurately tracks current status
+- ✅ CLAUDE.md includes workflow section
+- ✅ PR submitted and merged
 
 ---
 
-## Upcoming Milestones
+## Current Milestone
 
-### 📋 Milestone 2: Foundation & Core Scanning
+### 📋 Milestone 2: Foundation & Core Scanning (Next)
 
 **Duration:** ~10 hours
-**Status:** Not started
-**Planned Start:** After Milestone 1 merged
+**Status:** Ready to start
+**Planned Start:** Today (Nov 28, 2025)
+
+---
 
 **Scope:**
 Build the core scanning engine with configuration, file walking, hashing, basic metadata extraction, and JSON output.
@@ -119,6 +107,8 @@ Build the core scanning engine with configuration, file walking, hashing, basic 
 **Estimated Timeline:** 1-2 days of focused work
 
 ---
+
+## Upcoming Milestones
 
 ### 📋 Milestone 3: Advanced Metadata
 
@@ -288,12 +278,12 @@ The following features are **not included in MVP** and will be implemented later
 | Milestone | Duration | Status | Started | Completed |
 |-----------|----------|--------|---------|-----------|
 | M0: Shared API | 3h | ✅ Complete | Nov 27 | Nov 27 |
-| M1: Documentation | 6h | 🔄 95% | Nov 28 | Nov 28 (today) |
-| M2: Foundation & Core | 10h | 📋 Upcoming | TBD | TBD |
+| M1: Documentation | 6h | ✅ Complete | Nov 28 | Nov 28 |
+| M2: Foundation & Core | 10h | 📋 Next | TBD | TBD |
 | M3: Advanced Metadata | 8h | 📋 Upcoming | TBD | TBD |
 | M4: Hierarchy & Archives | 10h | 📋 Upcoming | TBD | TBD |
 | M5: Copy & Polish | 8h | 📋 Upcoming | TBD | TBD |
-| **Total** | **45h** | **11% done** | | |
+| **Total** | **45h** | **20% done** | | |
 
 **Estimated Completion:** 4-6 weeks (assuming ~8-10h/week)
 

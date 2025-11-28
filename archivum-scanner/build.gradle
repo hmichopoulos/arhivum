@@ -26,6 +26,9 @@ dependencies {
     // HTTP client
     implementation 'com.squareup.okhttp3:okhttp:4.12.0'
 
+    // YAML configuration
+    implementation 'org.yaml:snakeyaml:2.2'
+
     // Utilities
     compileOnly 'org.projectlombok:lombok:1.18.30'
     annotationProcessor 'org.projectlombok:lombok:1.18.30'

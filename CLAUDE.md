@@ -48,6 +48,7 @@ The user has ~20 external HDDs (mostly 4TB each), multiple cloud accounts (OneDr
 
 ### Backend (archivum-server)
 - Java 21
+- Gradle 8.x (build tool)
 - Spring Boot 3
 - Spring Web (REST controllers)
 - Spring WebSocket (real-time updates)
@@ -67,6 +68,7 @@ The user has ~20 external HDDs (mostly 4TB each), multiple cloud accounts (OneDr
 
 ### Scanner (archivum-scanner)
 - Java 21
+- Gradle 8.x (build tool)
 - Lightweight CLI application
 - No Spring dependencies (keep it minimal)
 - Communicates with server via REST
@@ -281,7 +283,7 @@ Key entities:
 ### Backend
 ```bash
 cd archivum-server
-./mvnw test
+./gradlew test
 ```
 
 ### Frontend
@@ -311,7 +313,7 @@ docker run -d --name archivum-db \
 
 # Start backend
 cd archivum-server
-./mvnw spring-boot:run
+./gradlew bootRun
 
 # Start frontend
 cd archivum-ui
@@ -323,7 +325,7 @@ npm run dev
 
 ### Adding a new API endpoint
 
-1. Create DTO in `archivum-server/src/main/java/com/archivum/api/dto/`
+1. Create DTO in `archivum-server/src/main/java/tech/zaisys/archivum/server/api/dto/`
 2. Create controller method in appropriate controller
 3. Create service method if needed
 4. Add frontend API call in `archivum-ui/src/api/`

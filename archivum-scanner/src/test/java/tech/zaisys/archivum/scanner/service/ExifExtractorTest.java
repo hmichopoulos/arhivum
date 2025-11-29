@@ -128,33 +128,34 @@ class ExifExtractorTest {
         assertNull(exif, "Should return null for PNG without EXIF data");
     }
 
-    // Note: The following tests would require actual JPEG files with EXIF data
-    // For comprehensive testing, consider adding test resources with real images
+    // Note: The following integration tests are deferred to future improvements (low priority)
+    // They would require actual JPEG files with EXIF data in src/test/resources/test-images/
+    //
+    // Future Improvement - Low Priority:
+    // Add integration tests with real EXIF images to verify:
+    // - Camera make/model extraction
+    // - Date/time original extraction
+    // - Dimensions, orientation extraction
+    // - GPS coordinates (latitude, longitude, altitude)
+    // - Lens model, focal length, aperture, shutter speed, ISO, flash
+    // - Handling of partial EXIF data (missing fields)
 
     @Test
     void extractExif_validJpegWithExif_extractsMetadata() {
-        // This test would require a test JPEG file with EXIF data
-        // in src/test/resources/test-images/
-        //
+        // TODO: Future improvement - Add integration test with real EXIF JPEG
         // Expected behavior:
         // - Should extract camera make/model if present
         // - Should extract date/time original if present
         // - Should extract dimensions if present
         // - Should handle partial EXIF data gracefully
-        //
-        // For now, this serves as documentation for manual testing
     }
 
     @Test
     void extractExif_jpegWithGps_extractsGpsCoordinates() {
-        // This test would require a test JPEG file with GPS data
-        // in src/test/resources/test-images/
-        //
+        // TODO: Future improvement - Add integration test with GPS EXIF JPEG
         // Expected behavior:
         // - Should extract latitude, longitude, altitude
         // - GPS coordinates should be within valid ranges
         // - Should handle missing altitude gracefully
-        //
-        // For now, this serves as documentation for manual testing
     }
 }

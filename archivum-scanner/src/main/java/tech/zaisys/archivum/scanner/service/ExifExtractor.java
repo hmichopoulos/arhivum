@@ -101,12 +101,9 @@ public class ExifExtractor {
         if (gpsDir == null) return null;
 
         try {
-            Double latitude = gpsDir.getGeoLocation() != null
-                ? gpsDir.getGeoLocation().getLatitude()
-                : null;
-            Double longitude = gpsDir.getGeoLocation() != null
-                ? gpsDir.getGeoLocation().getLongitude()
-                : null;
+            var geoLocation = gpsDir.getGeoLocation();
+            Double latitude = geoLocation != null ? geoLocation.getLatitude() : null;
+            Double longitude = geoLocation != null ? geoLocation.getLongitude() : null;
             Double altitude = gpsDir.getDouble(GpsDirectory.TAG_ALTITUDE);
 
             if (latitude == null && longitude == null && altitude == null) {

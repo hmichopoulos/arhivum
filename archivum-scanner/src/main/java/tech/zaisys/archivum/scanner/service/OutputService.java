@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import lombok.extern.slf4j.Slf4j;
+import tech.zaisys.archivum.api.dto.CodeProjectDto;
 import tech.zaisys.archivum.api.dto.FileDto;
 import tech.zaisys.archivum.api.dto.FileBatchDto;
 import tech.zaisys.archivum.api.dto.SourceDto;
@@ -202,6 +203,26 @@ public class OutputService {
      */
     public int getCurrentBatchNumber() {
         return batchNumber;
+    }
+
+    /**
+     * Write code projects to JSON.
+     *
+     * @param sourceId Source ID
+     * @param projects List of detected code projects
+     * @throws IOException if write fails
+     */
+    public void writeCodeProjects(UUID sourceId, List<CodeProjectDto> projects) throws IOException {
+        if (projects.isEmpty()) {
+            return;
+        }
+
+        Path sourceDir = outputDir.resolve(sourceId.toString());
+        Path projectsPath = sourceDir.resolve("code-projects.json");
+
+        objectMapper.writeValue(projectsPath.toFile(), projects);
+
+        log.info("Wrote {} code projects to {}", projects.size(), projectsPath);
     }
 
     /**

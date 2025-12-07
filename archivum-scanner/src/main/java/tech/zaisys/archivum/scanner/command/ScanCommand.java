@@ -4,6 +4,7 @@ import lombok.extern.slf4j.Slf4j;
 import picocli.CommandLine.Command;
 import picocli.CommandLine.Option;
 import picocli.CommandLine.Parameters;
+import tech.zaisys.archivum.api.dto.CodeProjectDto;
 import tech.zaisys.archivum.api.dto.FileDto;
 import tech.zaisys.archivum.api.dto.FileBatchDto;
 import tech.zaisys.archivum.api.dto.PhysicalId;
@@ -18,10 +19,9 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Instant;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.UUID;
+import java.util.*;
 import java.util.concurrent.Callable;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * Main scan command that orchestrates the file scanning process.
@@ -165,6 +165,7 @@ public class ScanCommand implements Callable<Integer> {
             // Process files
             List<FileDto> currentBatch = new ArrayList<>();
             List<OutputService.ScanError> errors = new ArrayList<>();
+            Map<Path, String> fileHashMap = new ConcurrentHashMap<>();
 
             for (Path file : files) {
                 try {
@@ -178,6 +179,9 @@ public class ScanCommand implements Callable<Integer> {
 
                     // Register hash immediately for future duplicate detection
                     outputService.registerHash(hash);
+
+                    // Store file hash for code project detection
+                    fileHashMap.put(file, hash);
 
                     // Determine if EXIF should be extracted
                     // Skip EXIF if: disabled OR (optimization enabled AND duplicate)
@@ -225,6 +229,27 @@ public class ScanCommand implements Callable<Integer> {
 
             // Complete progress
             progress.complete();
+
+            // Scan for code projects
+            System.out.println();
+            System.out.println("Scanning for code projects...");
+            CodeProjectScannerService projectScanner = new CodeProjectScannerService();
+            CodeProjectScannerService.ScanResult projectScanResult =
+                projectScanner.scanForProjects(scanPath, source.getId(), fileHashMap);
+
+            List<CodeProjectDto> codeProjects = projectScanResult.projects();
+
+            if (!codeProjects.isEmpty()) {
+                System.out.println("Found " + codeProjects.size() + " code project(s):");
+                for (CodeProjectDto project : codeProjects) {
+                    System.out.println("  - " + project.getIdentity().getIdentifier() +
+                        " (" + project.getIdentity().getType().getDisplayName() + ") at " +
+                        project.getRootPath());
+                }
+                outputService.writeCodeProjects(source.getId(), codeProjects);
+            } else {
+                System.out.println("No code projects detected.");
+            }
 
             // Write summary
             outputService.writeSummary(

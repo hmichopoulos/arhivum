@@ -17,7 +17,7 @@ Different zones have different deduplication rules to avoid breaking software in
 | BOOKS | ✅ Yes | ✅ Yes | Same ebook is same ebook |
 | SOFTWARE | ❌ No | ✅ Yes | DLLs are shared, don't break installs |
 | BACKUP | ❌ No | ✅ Yes | Preserve backup integrity |
-| CODE | ❌ No | ✅ Yes | Repos have shared files |
+| CODE | ❌ No | ✅ Yes | Repos have shared files (see [CODE_DETECTION.md](CODE_DETECTION.md)) |
 | UNKNOWN | ❌ No | ❌ No | Don't touch until classified |
 
 ## File-Level Deduplication

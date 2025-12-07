@@ -18,8 +18,8 @@ public class CodeProjectDetectionService {
     private final List<ProjectDetector> detectors;
 
     public CodeProjectDetectionService() {
-        // Initialize all detectors
-        this.detectors = List.of(
+        // Initialize all detectors in a mutable list
+        this.detectors = new java.util.ArrayList<>(List.of(
             new MavenProjectDetector(),
             new GradleProjectDetector(),
             new NpmProjectDetector(),
@@ -28,7 +28,7 @@ public class CodeProjectDetectionService {
             new RustProjectDetector(),
             new GitProjectDetector(),
             new GenericCodeDetector()
-        );
+        ));
 
         // Sort by priority (highest first)
         this.detectors.sort(Comparator.comparingInt(ProjectDetector::getPriority).reversed());

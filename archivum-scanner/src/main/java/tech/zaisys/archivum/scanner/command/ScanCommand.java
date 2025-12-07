@@ -6,6 +6,7 @@ import picocli.CommandLine.Option;
 import picocli.CommandLine.Parameters;
 import tech.zaisys.archivum.api.dto.FileDto;
 import tech.zaisys.archivum.api.dto.FileBatchDto;
+import tech.zaisys.archivum.api.dto.PhysicalId;
 import tech.zaisys.archivum.api.dto.SourceDto;
 import tech.zaisys.archivum.api.enums.ScanStatus;
 import tech.zaisys.archivum.api.enums.SourceType;
@@ -89,15 +90,45 @@ public class ScanCommand implements Callable<Integer> {
             return 1;
         }
 
-        // Determine source name
-        String sourceNameResolved = sourceName != null
-            ? sourceName
-            : scanPath.getFileName().toString();
-
         System.out.println("Archivum Scanner v0.1.0");
         System.out.println("======================");
-        System.out.println("Source: " + sourceNameResolved);
         System.out.println("Path:   " + scanPath.toAbsolutePath());
+        System.out.println();
+
+        // Detect physical device identifiers
+        System.out.println("Detecting physical device identifiers...");
+        PhysicalIdDetector physicalIdDetector = new PhysicalIdDetector();
+        PhysicalId physicalId = physicalIdDetector.detect(scanPath);
+
+        // Interactive prompts for source name, physical label, notes
+        InteractivePrompt prompt = new InteractivePrompt();
+        String sourceNameResolved;
+        if (sourceName != null) {
+            sourceNameResolved = sourceName;
+        } else {
+            sourceNameResolved = prompt.promptForSourceName(physicalId.getVolumeLabel());
+        }
+
+        String physicalLabel = prompt.promptForPhysicalLabel();
+        String notes = prompt.promptForNotes();
+        prompt.close();
+
+        // Update PhysicalId with user-provided information
+        physicalId = PhysicalId.builder()
+            .diskUuid(physicalId.getDiskUuid())
+            .partitionUuid(physicalId.getPartitionUuid())
+            .volumeLabel(physicalId.getVolumeLabel())
+            .serialNumber(physicalId.getSerialNumber())
+            .mountPoint(physicalId.getMountPoint())
+            .filesystemType(physicalId.getFilesystemType())
+            .capacity(physicalId.getCapacity())
+            .usedSpace(physicalId.getUsedSpace())
+            .physicalLabel(physicalLabel)
+            .notes(notes)
+            .build();
+
+        System.out.println();
+        System.out.println("Source: " + sourceNameResolved);
         System.out.println();
 
         // Initialize services
@@ -109,8 +140,8 @@ public class ScanCommand implements Callable<Integer> {
             MetadataService metadataService = new MetadataService();
             OutputService outputService = new OutputService(outputPath);
 
-            // Create source
-            SourceDto source = createSource(sourceNameResolved);
+            // Create source with physical ID
+            SourceDto source = createSource(sourceNameResolved, physicalId);
             outputService.initializeSource(source);
 
             // Discover files
@@ -137,8 +168,10 @@ public class ScanCommand implements Callable<Integer> {
 
             for (Path file : files) {
                 try {
-                    // Compute hash
-                    String hash = hashService.computeHash(file);
+                    // Compute hash with progress callback for large files
+                    String hash = hashService.computeHash(file, (bytesProcessed, totalBytes) -> {
+                        progress.updateFileProgress(file.toString(), bytesProcessed, totalBytes);
+                    });
 
                     // Check if ALREADY exists (before registering)
                     boolean isDuplicate = outputService.hashExists(hash);
@@ -146,8 +179,13 @@ public class ScanCommand implements Callable<Integer> {
                     // Register hash immediately for future duplicate detection
                     outputService.registerHash(hash);
 
-                    // Extract metadata
-                    FileDto fileDto = metadataService.extractMetadata(file, source.getId(), hash);
+                    // Determine if EXIF should be extracted
+                    // Skip EXIF if: disabled OR (optimization enabled AND duplicate)
+                    boolean shouldExtractExif = config.isExifExtractionEnabled()
+                        && (!config.isExifOptimizationEnabled() || !isDuplicate);
+
+                    // Extract metadata with optional EXIF
+                    FileDto fileDto = metadataService.extractMetadata(file, source.getId(), hash, shouldExtractExif);
 
                     // Mark as duplicate
                     fileDto.setIsDuplicate(isDuplicate);
@@ -199,11 +237,20 @@ public class ScanCommand implements Callable<Integer> {
 
             // Print results
             System.out.println();
-            System.out.println("Output directory: " + outputPath.toAbsolutePath());
+            System.out.println("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+            System.out.println("Results saved to:");
+            System.out.println("  " + outputPath.toAbsolutePath().resolve(source.getId().toString()));
+            System.out.println();
+            System.out.println("Quick access:");
+            System.out.println("  Source info:   " + outputPath.toAbsolutePath().resolve(source.getId().toString()).resolve("source.json"));
+            System.out.println("  File data:     " + outputPath.toAbsolutePath().resolve(source.getId().toString()).resolve("files/"));
+            System.out.println("  Summary:       " + outputPath.toAbsolutePath().resolve(source.getId().toString()).resolve("summary.json"));
+            System.out.println("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
 
             if (!errors.isEmpty()) {
-                System.out.println("Warnings: " + errors.size() + " files could not be processed");
-                System.out.println("See summary.json for details");
+                System.out.println();
+                System.out.println("⚠ Warnings: " + errors.size() + " files could not be processed");
+                System.out.println("  See summary.json for details");
             }
 
             return 0;
@@ -233,12 +280,13 @@ public class ScanCommand implements Callable<Integer> {
     /**
      * Create a SourceDto for this scan.
      */
-    private SourceDto createSource(String name) {
+    private SourceDto createSource(String name, PhysicalId physicalId) {
         return SourceDto.builder()
             .id(UUID.randomUUID())
             .name(name)
             .type(SourceType.DISK)
             .rootPath(scanPath.toAbsolutePath().toString())
+            .physicalId(physicalId)
             .status(ScanStatus.SCANNING)
             .totalFiles(0L)
             .totalSize(0L)

@@ -47,11 +47,45 @@ public class ProgressReporter {
     }
 
     /**
+     * Update progress while hashing a large file.
+     * Shows within-file progress (e.g., "45.2 GB / 489 GB").
+     *
+     * @param currentFile Path of current file being hashed
+     * @param bytesProcessed Bytes processed so far in this file
+     * @param fileSize Total size of the file
+     */
+    public void updateFileProgress(String currentFile, long bytesProcessed, long fileSize) {
+        state.currentFile = currentFile;
+
+        // Update display
+        long currentTime = System.currentTimeMillis();
+        if (currentTime - lastUpdateTime >= UPDATE_INTERVAL_MS) {
+            displayFileProgress(bytesProcessed, fileSize);
+            lastUpdateTime = currentTime;
+        }
+    }
+
+    /**
+     * Display within-file progress for large files.
+     */
+    private void displayFileProgress(long bytesProcessed, long fileSize) {
+        double percent = fileSize > 0 ? (bytesProcessed * 100.0 / fileSize) : 0;
+
+        System.out.print(String.format("\rHashing: %s (%s / %s - %.1f%%)...",
+            truncate(state.currentFile, 40),
+            formatBytes(bytesProcessed),
+            formatBytes(fileSize),
+            percent));
+        System.out.flush();
+    }
+
+    /**
      * Report scan completion.
      */
     public void complete() {
         state.completed = true;
         displayProgress();
+        System.out.println(); // Move to next line after progress
         System.out.println();
         System.out.println("Scan complete!");
         displaySummary();
@@ -59,17 +93,9 @@ public class ProgressReporter {
 
     /**
      * Display current progress to console.
+     * Uses single-line updates with \r for compatibility with plain console mode.
      */
     private void displayProgress() {
-        // Clear previous lines (ANSI escape codes)
-        if (state.processedFiles > 1) {
-            System.out.print("\033[6A\033[J"); // Move up 6 lines and clear to end
-        }
-
-        System.out.println("Scanning: " + state.sourceName);
-        System.out.println();
-
-        // Progress
         double filesPercent = state.totalFiles > 0
             ? (state.processedFiles * 100.0 / state.totalFiles)
             : 0;
@@ -77,26 +103,21 @@ public class ProgressReporter {
             ? (state.processedSize * 100.0 / state.totalSize)
             : 0;
 
-        System.out.printf("Progress:%n");
-        System.out.printf("  Files:  %,d / %,d (%.1f%%)%n",
-            state.processedFiles, state.totalFiles, filesPercent);
-        System.out.printf("  Size:   %s / %s (%.1f%%)%n",
-            formatBytes(state.processedSize),
-            formatBytes(state.totalSize),
-            sizePercent);
-
-        // Speed
+        // Calculate speed
         long elapsedSeconds = Duration.between(state.startTime, Instant.now()).getSeconds();
+        String speedInfo = "";
         if (elapsedSeconds > 0) {
             long filesPerSec = state.processedFiles / elapsedSeconds;
             long bytesPerSec = state.processedSize / elapsedSeconds;
-            System.out.printf("  Speed:  %d files/sec, %s/sec%n",
-                filesPerSec, formatBytes(bytesPerSec));
+            speedInfo = String.format(" @ %,d files/sec, %s/sec", filesPerSec, formatBytes(bytesPerSec));
         }
 
-        // Current file
-        System.out.println();
-        System.out.println("Current: " + truncate(state.currentFile, 60));
+        // Single-line progress update (works in plain console mode)
+        System.out.print(String.format("\rScanning: %,d/%,d files (%.1f%%) | %s/%s (%.1f%%)%s",
+            state.processedFiles, state.totalFiles, filesPercent,
+            formatBytes(state.processedSize), formatBytes(state.totalSize), sizePercent,
+            speedInfo));
+        System.out.flush();
     }
 
     /**

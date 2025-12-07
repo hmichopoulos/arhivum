@@ -29,6 +29,9 @@ dependencies {
     // YAML configuration
     implementation 'org.yaml:snakeyaml:2.2'
 
+    // EXIF metadata extraction
+    implementation 'com.drewnoakes:metadata-extractor:2.18.0'
+
     // Utilities
     compileOnly 'org.projectlombok:lombok:1.18.30'
     annotationProcessor 'org.projectlombok:lombok:1.18.30'
@@ -48,6 +51,11 @@ dependencies {
 
 application {
     mainClass = 'tech.zaisys.archivum.scanner.ScannerApp'
+}
+
+// Enable interactive input for the run task
+tasks.named('run') {
+    standardInput = System.in
 }
 
 tasks.named('test') {

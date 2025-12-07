@@ -72,9 +72,20 @@ public class ScanCommand implements Callable<Integer> {
     )
     private Integer batchSize;
 
+    @Option(
+        names = {"-v", "--verbose"},
+        description = "Enable verbose (DEBUG) logging"
+    )
+    private boolean verbose;
+
     @Override
     public Integer call() throws Exception {
         Instant startTime = Instant.now();
+
+        // Configure logging level based on verbose flag
+        if (verbose) {
+            setLogLevel("DEBUG");
+        }
 
         // Load configuration
         ScannerConfig config = loadConfiguration();
@@ -329,5 +340,16 @@ public class ScanCommand implements Callable<Integer> {
             throws IOException {
         FileBatchDto batch = outputService.createBatch(sourceId, files);
         outputService.writeBatch(batch);
+    }
+
+    /**
+     * Set the logging level programmatically.
+     */
+    private void setLogLevel(String level) {
+        ch.qos.logback.classic.Logger root =
+            (ch.qos.logback.classic.Logger) org.slf4j.LoggerFactory.getLogger(
+                org.slf4j.Logger.ROOT_LOGGER_NAME);
+        root.setLevel(ch.qos.logback.classic.Level.valueOf(level));
+        log.info("Log level set to {}", level);
     }
 }

@@ -37,6 +37,7 @@ public class MavenProjectDetector implements ProjectDetector {
 
         try {
             DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
+            factory.setNamespaceAware(false); // Ignore namespaces for simpler parsing
             DocumentBuilder builder = factory.newDocumentBuilder();
             Document doc = builder.parse(pomPath.toFile());
             doc.getDocumentElement().normalize();
@@ -100,12 +101,13 @@ public class MavenProjectDetector implements ProjectDetector {
      * Get text content of a direct child element.
      */
     private String getElementText(Element parent, String tagName) {
-        NodeList nodeList = parent.getElementsByTagName(tagName);
-        if (nodeList.getLength() > 0) {
-            Element element = (Element) nodeList.item(0);
-            // Check if this is a direct child (not nested)
-            if (element.getParentNode() == parent) {
-                return element.getTextContent().trim();
+        NodeList children = parent.getChildNodes();
+        for (int i = 0; i < children.getLength(); i++) {
+            if (children.item(i) instanceof Element) {
+                Element child = (Element) children.item(i);
+                if (child.getTagName().equals(tagName)) {
+                    return child.getTextContent().trim();
+                }
             }
         }
         return null;

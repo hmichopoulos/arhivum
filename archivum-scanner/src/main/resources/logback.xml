@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<configuration>
+
+    <!-- Console appender for standard output -->
+    <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
+        <encoder>
+            <pattern>%d{HH:mm:ss.SSS} %-5level %logger{36} - %msg%n</pattern>
+        </encoder>
+    </appender>
+
+    <!-- Set log level for scanner package -->
+    <logger name="tech.zaisys.archivum.scanner" level="INFO"/>
+
+    <!-- Reduce verbosity of third-party libraries -->
+    <logger name="org.apache" level="WARN"/>
+    <logger name="com.fasterxml" level="WARN"/>
+
+    <!-- Root logger configuration -->
+    <root level="INFO">
+        <appender-ref ref="CONSOLE"/>
+    </root>
+
+</configuration>

@@ -22,16 +22,12 @@ CREATE TABLE code_project (
     archive_path TEXT,                              -- Target path in /Archive/Code
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
-
-    -- Note: Foreign key to source table will be added when source table is created
-    -- CONSTRAINT fk_code_project_source FOREIGN KEY (source_id) REFERENCES source(id)
 );
 
 -- Indexes for code_project
 CREATE INDEX idx_code_project_identifier ON code_project(identifier);
 CREATE INDEX idx_code_project_content_hash ON code_project(content_hash);
 CREATE INDEX idx_code_project_type ON code_project(project_type);
-CREATE INDEX idx_code_project_source_id ON code_project(source_id);
 CREATE UNIQUE INDEX idx_code_project_source_path ON code_project(source_id, root_path);
 
 -- Table for code project duplicate groups

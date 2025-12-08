@@ -2,6 +2,8 @@ package tech.zaisys.archivum.server.service;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -9,6 +11,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import tech.zaisys.archivum.api.dto.FolderNodeDto;
 import tech.zaisys.archivum.server.domain.ScannedFile;
+import tech.zaisys.archivum.server.exception.TreeSizeLimitExceededException;
 import tech.zaisys.archivum.server.repository.ScannedFileRepository;
 
 import java.util.*;
@@ -24,34 +27,54 @@ public class FolderTreeService {
     private final ScannedFileRepository fileRepository;
 
     private static final int PAGE_SIZE = 1000;
+    private static final int MAX_TREE_NODES = 100_000; // Limit total nodes (files + folders)
+    private static final int MAX_FILES_WARNING = 50_000; // Warn at 50k files
+    private static final long MAX_TREE_SIZE_BYTES = 500_000_000L; // 500MB memory estimate
 
     /**
      * Build a folder tree for a given source.
      * Uses pagination to avoid loading all files into memory at once.
+     * Results are cached to avoid rebuilding the same tree multiple times.
      *
      * @param sourceId Source ID
      * @return Root folder node containing the entire tree
      */
+    @Cacheable(value = "folderTrees", key = "#sourceId")
     @Transactional(readOnly = true)
     public FolderNodeDto buildTree(UUID sourceId) {
-        log.debug("Building folder tree for source {}", sourceId);
+        log.debug("Building folder tree for source {} (cache miss)", sourceId);
 
         // Build the tree using pagination
         return buildTreeWithPagination(sourceId);
     }
 
     /**
+     * Invalidate cached tree for a source.
+     * Call this when files are added/removed from a source.
+     *
+     * @param sourceId Source ID
+     */
+    @CacheEvict(value = "folderTrees", key = "#sourceId")
+    public void invalidateTree(UUID sourceId) {
+        log.debug("Invalidated folder tree cache for source {}", sourceId);
+    }
+
+    /**
      * Build a folder tree using pagination to process files in batches.
      * This avoids loading all files into memory at once.
+     * Includes memory safety limits to prevent OOM errors.
      *
      * @param sourceId Source ID
      * @return Root folder node
+     * @throws TreeSizeLimitExceededException if tree exceeds memory limits
      */
     private FolderNodeDto buildTreeWithPagination(UUID sourceId) {
         Map<String, FolderNode> folderMap = new HashMap<>();
         FolderNode root = new FolderNode("");
 
         int pageNumber = 0;
+        int totalFiles = 0;
+        long estimatedMemoryBytes = 0;
         Page<ScannedFile> page;
 
         do {
@@ -60,16 +83,36 @@ public class FolderTreeService {
 
             // Process this batch of files
             for (ScannedFile file : page.getContent()) {
+                // Check limits before adding
+                int totalNodes = totalFiles + folderMap.size();
+                if (totalNodes >= MAX_TREE_NODES) {
+                    log.error("Tree size limit exceeded: {} nodes (max: {})", totalNodes, MAX_TREE_NODES);
+                    throw new TreeSizeLimitExceededException(totalNodes, MAX_TREE_NODES);
+                }
+
                 addFileToTree(file, root, folderMap);
+                totalFiles++;
+
+                // Estimate memory usage (rough estimate: ~500 bytes per node)
+                estimatedMemoryBytes = (long) (totalFiles + folderMap.size()) * 500;
             }
 
             pageNumber++;
-            log.debug("Processed page {}/{} ({} files)",
-                pageNumber, page.getTotalPages(), page.getNumberOfElements());
+
+            // Log warning at threshold
+            if (totalFiles == MAX_FILES_WARNING) {
+                log.warn("Tree building approaching limits: {} files, {} folders",
+                    totalFiles, folderMap.size());
+            }
+
+            log.debug("Processed page {}/{} ({} files, {} total nodes, ~{}MB memory)",
+                pageNumber, page.getTotalPages(), page.getNumberOfElements(),
+                totalFiles + folderMap.size(), estimatedMemoryBytes / 1_000_000);
 
         } while (page.hasNext());
 
-        log.debug("Built tree from {} total files", pageNumber * PAGE_SIZE);
+        log.info("Built tree: {} files, {} folders, estimated ~{}MB memory",
+            totalFiles, folderMap.size(), estimatedMemoryBytes / 1_000_000);
 
         return convertToDto(root);
     }

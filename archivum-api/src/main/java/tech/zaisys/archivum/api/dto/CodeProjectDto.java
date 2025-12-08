@@ -1,6 +1,11 @@
 package tech.zaisys.archivum.api.dto;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
+import jakarta.validation.Valid;
+import jakarta.validation.constraints.Min;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Pattern;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -28,37 +33,49 @@ public class CodeProjectDto {
     /**
      * Source ID this project belongs to
      */
+    @NotNull(message = "Source ID is required")
     private UUID sourceId;
 
     /**
      * Root path where this project was found
      */
+    @NotBlank(message = "Root path is required")
     private String rootPath;
 
     /**
      * Project identity information
      */
+    @NotNull(message = "Project identity is required")
+    @Valid
     private ProjectIdentityDto identity;
 
     /**
      * Hash of all source file hashes (content hash)
      * Used for duplicate detection
      */
+    @NotBlank(message = "Content hash is required")
+    @Pattern(regexp = "^[a-f0-9]{64}$", message = "Content hash must be a valid SHA-256 hash (64 hex characters)")
     private String contentHash;
 
     /**
      * Number of source files (excluding build artifacts, dependencies)
      */
+    @NotNull(message = "Source file count is required")
+    @Min(value = 0, message = "Source file count must be non-negative")
     private Integer sourceFileCount;
 
     /**
      * Total number of files (including artifacts, dependencies)
      */
+    @NotNull(message = "Total file count is required")
+    @Min(value = 0, message = "Total file count must be non-negative")
     private Integer totalFileCount;
 
     /**
      * Total size in bytes
      */
+    @NotNull(message = "Total size is required")
+    @Min(value = 0, message = "Total size must be non-negative")
     private Long totalSizeBytes;
 
     /**

@@ -10,13 +10,17 @@ type DuplicateLocationsModalProps = {
   onClose: () => void;
   duplicates: ScannedFile[];
   currentFileId: string;
+  isLoading?: boolean;
+  error?: string | null;
 };
 
 export function DuplicateLocationsModal({
   isOpen,
   onClose,
   duplicates,
-  currentFileId
+  currentFileId,
+  isLoading = false,
+  error = null
 }: DuplicateLocationsModalProps) {
   useEffect(() => {
     const handleEscape = (e: KeyboardEvent) => {
@@ -90,12 +94,35 @@ export function DuplicateLocationsModal({
 
           {/* Content */}
           <div className="p-6 overflow-y-auto max-h-[calc(80vh-140px)]">
-            <p className="text-sm text-gray-600 mb-4">
-              Found {duplicates.length} {duplicates.length === 1 ? 'copy' : 'copies'} of this file:
-            </p>
+            {isLoading && (
+              <div className="flex flex-col items-center justify-center py-12">
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mb-4"></div>
+                <p className="text-gray-600">Loading duplicate locations...</p>
+              </div>
+            )}
 
-            <div className="space-y-3">
-              {duplicates.map((file) => (
+            {error && !isLoading && (
+              <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-4">
+                <div className="flex items-start">
+                  <svg className="w-5 h-5 text-red-600 mr-3 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+                  </svg>
+                  <div>
+                    <h3 className="text-sm font-medium text-red-800">Error</h3>
+                    <p className="text-sm text-red-700 mt-1">{error}</p>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {!isLoading && !error && (
+              <>
+                <p className="text-sm text-gray-600 mb-4">
+                  Found {duplicates.length} {duplicates.length === 1 ? 'copy' : 'copies'} of this file:
+                </p>
+
+                <div className="space-y-3">
+                  {duplicates.map((file) => (
                 <div
                   key={file.id}
                   className={`p-4 rounded-lg border ${
@@ -139,7 +166,9 @@ export function DuplicateLocationsModal({
                   </div>
                 </div>
               ))}
-            </div>
+                </div>
+              </>
+            )}
           </div>
 
           {/* Footer */}

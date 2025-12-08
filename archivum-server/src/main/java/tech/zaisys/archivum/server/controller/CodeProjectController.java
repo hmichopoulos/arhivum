@@ -1,5 +1,6 @@
 package tech.zaisys.archivum.server.controller;
 
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
@@ -122,7 +123,7 @@ public class CodeProjectController {
      * @return Created project
      */
     @PostMapping
-    public ResponseEntity<CodeProjectDto> createProject(@RequestBody CodeProjectDto project) {
+    public ResponseEntity<CodeProjectDto> createProject(@Valid @RequestBody CodeProjectDto project) {
         log.info("POST /api/code-projects - Creating project: {}", project.getIdentity().getIdentifier());
         CodeProjectDto created = codeProjectService.save(project);
         return ResponseEntity.status(HttpStatus.CREATED).body(created);
@@ -130,12 +131,13 @@ public class CodeProjectController {
 
     /**
      * Create multiple code projects (bulk upload).
+     * Each project in the list is validated.
      *
      * @param projects List of code project DTOs
      * @return List of created projects
      */
     @PostMapping("/bulk")
-    public ResponseEntity<List<CodeProjectDto>> createProjects(@RequestBody List<CodeProjectDto> projects) {
+    public ResponseEntity<List<CodeProjectDto>> createProjects(@RequestBody List<@Valid CodeProjectDto> projects) {
         log.info("POST /api/code-projects/bulk - Creating {} projects", projects.size());
         List<CodeProjectDto> created = codeProjectService.saveAll(projects);
         return ResponseEntity.status(HttpStatus.CREATED).body(created);

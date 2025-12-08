@@ -77,7 +77,6 @@ public class UploadCommand implements Callable<Integer> {
     public Integer call() {
         try {
             startTime = System.currentTimeMillis();
-
             configureLogging();
 
             if (!validateOutputDirectory()) {
@@ -85,43 +84,45 @@ public class UploadCommand implements Callable<Integer> {
             }
 
             printHeader();
+            initializeHttpClient();
 
-            // Initialize HTTP client
-            httpClient = HttpClient.newBuilder()
-                .connectTimeout(Duration.ofSeconds(timeoutSeconds))
-                .build();
-
-            // Read source metadata
             SourceDto source = readSourceJson();
-            log.info("Source: {} ({})", source.getName(), source.getType());
-
-            // Create source on server
-            UUID sourceId = createSource(source);
-            log.info("Created source on server with ID: {}", sourceId);
-
-            // Upload batch files
-            List<Path> batchFiles = findBatchFiles();
-            totalBatches = batchFiles.size();
-            log.info("Found {} batch files to upload", totalBatches);
-
-            for (Path batchFile : batchFiles) {
-                uploadBatch(sourceId, batchFile);
-            }
-
-            // Upload code projects if they exist
-            uploadCodeProjects(sourceId);
-
-            // Complete scan
-            completeScan(sourceId, source);
+            executeUpload(source);
 
             printSummary();
-
             return 0;
 
         } catch (Exception e) {
             log.error("Upload failed: {}", e.getMessage(), e);
             System.err.println("Error: " + e.getMessage());
             return 1;
+        }
+    }
+
+    private void initializeHttpClient() {
+        httpClient = HttpClient.newBuilder()
+            .connectTimeout(Duration.ofSeconds(timeoutSeconds))
+            .build();
+    }
+
+    private void executeUpload(SourceDto source) throws IOException, InterruptedException {
+        log.info("Source: {} ({})", source.getName(), source.getType());
+
+        UUID sourceId = createSource(source);
+        log.info("Created source on server with ID: {}", sourceId);
+
+        uploadBatchFiles(sourceId);
+        uploadCodeProjects(sourceId);
+        completeScan(sourceId, source);
+    }
+
+    private void uploadBatchFiles(UUID sourceId) throws IOException, InterruptedException {
+        List<Path> batchFiles = findBatchFiles();
+        totalBatches = batchFiles.size();
+        log.info("Found {} batch files to upload", totalBatches);
+
+        for (Path batchFile : batchFiles) {
+            uploadBatch(sourceId, batchFile);
         }
     }
 

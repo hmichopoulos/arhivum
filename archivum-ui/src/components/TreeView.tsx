@@ -8,6 +8,7 @@ import { CodeProject, ProjectType } from '../types/codeProject';
 import { ScannedFile } from '../types/file';
 import { getFileDuplicates } from '../api/files';
 import { DuplicateLocationsModal } from './DuplicateLocationsModal';
+import { getFileIcon, getProjectTypeIcon, FOLDER_ICON, OPEN_FOLDER_ICON } from '../utils/fileIcons';
 
 type TreeViewProps = {
   tree: FolderNode;
@@ -21,26 +22,36 @@ export function TreeView({ tree, codeProjects = [], onFileClick }: TreeViewProps
     fileId: string | null;
     duplicates: ScannedFile[];
     isLoading: boolean;
+    error: string | null;
   }>({
     isOpen: false,
     fileId: null,
     duplicates: [],
-    isLoading: false
+    isLoading: false,
+    error: null
   });
 
   const handleDuplicateClick = async (fileId: string) => {
-    setModalState({ isOpen: true, fileId, duplicates: [], isLoading: true });
+    setModalState({ isOpen: true, fileId, duplicates: [], isLoading: true, error: null });
 
     try {
       const duplicates = await getFileDuplicates(fileId);
       setModalState((prev) => ({
         ...prev,
         duplicates,
-        isLoading: false
+        isLoading: false,
+        error: null
       }));
     } catch (error) {
       console.error('Failed to fetch duplicates:', error);
-      setModalState((prev) => ({ ...prev, isLoading: false }));
+      const errorMessage = error instanceof Error
+        ? error.message
+        : 'Failed to load duplicate file locations. Please try again.';
+      setModalState((prev) => ({
+        ...prev,
+        isLoading: false,
+        error: errorMessage
+      }));
     }
   };
 
@@ -49,7 +60,8 @@ export function TreeView({ tree, codeProjects = [], onFileClick }: TreeViewProps
       isOpen: false,
       fileId: null,
       duplicates: [],
-      isLoading: false
+      isLoading: false,
+      error: null
     });
   };
 
@@ -78,6 +90,8 @@ export function TreeView({ tree, codeProjects = [], onFileClick }: TreeViewProps
           onClose={handleCloseModal}
           duplicates={modalState.duplicates}
           currentFileId={modalState.fileId}
+          isLoading={modalState.isLoading}
+          error={modalState.error}
         />
       )}
     </>
@@ -103,34 +117,6 @@ function TreeNode({ node, level, codeProjects, onFileClick, onDuplicateClick }: 
     return `${(bytes / Math.pow(k, i)).toFixed(1)} ${sizes[i]}`;
   };
 
-  const getFileIcon = (extension?: string): string => {
-    if (!extension) return '📄';
-    const ext = extension.toLowerCase();
-    if (['jpg', 'jpeg', 'png', 'gif', 'bmp', 'webp', 'svg'].includes(ext)) return '🖼️';
-    if (['mp4', 'avi', 'mkv', 'mov', 'wmv', 'flv'].includes(ext)) return '🎬';
-    if (['mp3', 'wav', 'flac', 'aac', 'ogg', 'wma'].includes(ext)) return '🎵';
-    if (['pdf'].includes(ext)) return '📕';
-    if (['doc', 'docx', 'odt', 'txt', 'rtf'].includes(ext)) return '📝';
-    if (['xls', 'xlsx', 'ods', 'csv'].includes(ext)) return '📊';
-    if (['zip', 'rar', '7z', 'tar', 'gz'].includes(ext)) return '📦';
-    if (['exe', 'msi', 'app', 'dmg'].includes(ext)) return '⚙️';
-    if (['js', 'ts', 'py', 'java', 'cpp', 'c', 'go', 'rs'].includes(ext)) return '💻';
-    return '📄';
-  };
-
-  const getProjectTypeIcon = (type: ProjectType): string => {
-    switch (type) {
-      case ProjectType.MAVEN: return '☕';
-      case ProjectType.GRADLE: return '🐘';
-      case ProjectType.NPM: return '📦';
-      case ProjectType.PYTHON: return '🐍';
-      case ProjectType.GO: return '🐹';
-      case ProjectType.RUST: return '🦀';
-      case ProjectType.GIT: return '🔧';
-      case ProjectType.GENERIC: return '📁';
-      default: return '💻';
-    }
-  };
 
   const getProjectTypeColor = (type: ProjectType): string => {
     switch (type) {
@@ -197,7 +183,7 @@ function TreeNode({ node, level, codeProjects, onFileClick, onDuplicateClick }: 
         <span className="text-gray-500 w-4">
           {node.children.length > 0 ? (isExpanded ? '▼' : '▶') : '  '}
         </span>
-        <span>{isExpanded ? '📂' : '📁'}</span>
+        <span>{isExpanded ? OPEN_FOLDER_ICON : FOLDER_ICON}</span>
         <span className="flex-1 font-semibold text-gray-900">{node.name}</span>
         {codeProject && (
           <span

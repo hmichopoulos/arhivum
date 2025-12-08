@@ -3,6 +3,7 @@ package tech.zaisys.archivum.scanner;
 import picocli.CommandLine;
 import picocli.CommandLine.Command;
 import tech.zaisys.archivum.scanner.command.ScanCommand;
+import tech.zaisys.archivum.scanner.command.UploadCommand;
 
 /**
  * Main entry point for the Archivum Scanner CLI application.
@@ -17,6 +18,7 @@ import tech.zaisys.archivum.scanner.command.ScanCommand;
     mixinStandardHelpOptions = true,
     subcommands = {
         ScanCommand.class,
+        UploadCommand.class,
         CommandLine.HelpCommand.class
     }
 )

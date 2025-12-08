@@ -11,6 +11,7 @@ import tech.zaisys.archivum.api.dto.FileDto;
 import tech.zaisys.archivum.server.service.FileBatchResult;
 import tech.zaisys.archivum.server.service.FileService;
 
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
@@ -50,6 +51,35 @@ public class FileController {
     }
 
     /**
+     * Query files with optional filters.
+     *
+     * GET /api/files?sourceId={id}&extension={ext}&isDuplicate={bool}&page={n}&size={m}
+     *
+     * @param sourceId Source ID (required)
+     * @param extension File extension filter (optional)
+     * @param isDuplicate Duplicate filter (optional)
+     * @param page Page number, 0-indexed (default: 0)
+     * @param size Page size (default: 100)
+     * @return List of file DTOs
+     */
+    @GetMapping
+    public ResponseEntity<List<FileDto>> queryFiles(
+            @RequestParam UUID sourceId,
+            @RequestParam(required = false) String extension,
+            @RequestParam(required = false) Boolean isDuplicate,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "100") int size) {
+
+        log.debug("GET /api/files?sourceId={}&extension={}&isDuplicate={}&page={}&size={}",
+            sourceId, extension, isDuplicate, page, size);
+
+        List<FileDto> files = fileService.queryFiles(
+            sourceId, extension, isDuplicate, page, size);
+
+        return ResponseEntity.ok(files);
+    }
+
+    /**
      * Get file by ID.
      *
      * GET /api/files/{id}
@@ -64,5 +94,21 @@ public class FileController {
         return fileService.findById(id)
             .map(ResponseEntity::ok)
             .orElse(ResponseEntity.notFound().build());
+    }
+
+    /**
+     * Get all files with the same SHA-256 hash (duplicates).
+     *
+     * GET /api/files/{id}/duplicates
+     *
+     * @param id File ID to find duplicates for
+     * @return List of all files with the same hash
+     */
+    @GetMapping("/{id}/duplicates")
+    public ResponseEntity<List<FileDto>> getDuplicates(@PathVariable UUID id) {
+        log.debug("GET /api/files/{}/duplicates", id);
+
+        List<FileDto> duplicates = fileService.findDuplicates(id);
+        return ResponseEntity.ok(duplicates);
     }
 }

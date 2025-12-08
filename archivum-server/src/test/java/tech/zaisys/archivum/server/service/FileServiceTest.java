@@ -383,4 +383,138 @@ class FileServiceTest {
         assertEquals(original.getId(), result.get().getOriginalFileId());
         verify(fileMapper).toDto(duplicate);
     }
+
+    @Test
+    void testFindDuplicates_WithMultipleDuplicates() {
+        // Given: a file with multiple duplicates (same SHA-256 hash)
+        UUID fileId = UUID.randomUUID();
+        String sha256Hash = "a1b2c3d4e5f6...";
+
+        ScannedFile originalFile = ScannedFile.builder()
+            .id(fileId)
+            .source(testSource)
+            .path("/photos/original.jpg")
+            .name("original.jpg")
+            .sha256(sha256Hash)
+            .size(1024000L)
+            .build();
+
+        ScannedFile duplicate1 = ScannedFile.builder()
+            .id(UUID.randomUUID())
+            .source(testSource)
+            .path("/backup/photo.jpg")
+            .name("photo.jpg")
+            .sha256(sha256Hash)
+            .size(1024000L)
+            .isDuplicate(true)
+            .build();
+
+        ScannedFile duplicate2 = ScannedFile.builder()
+            .id(UUID.randomUUID())
+            .source(testSource)
+            .path("/archive/image.jpg")
+            .name("image.jpg")
+            .sha256(sha256Hash)
+            .size(1024000L)
+            .isDuplicate(true)
+            .build();
+
+        List<ScannedFile> allDuplicates = List.of(originalFile, duplicate1, duplicate2);
+
+        FileDto originalDto = FileDto.builder()
+            .id(fileId)
+            .path("/photos/original.jpg")
+            .sha256(sha256Hash)
+            .build();
+
+        FileDto duplicate1Dto = FileDto.builder()
+            .id(duplicate1.getId())
+            .path("/backup/photo.jpg")
+            .sha256(sha256Hash)
+            .isDuplicate(true)
+            .build();
+
+        FileDto duplicate2Dto = FileDto.builder()
+            .id(duplicate2.getId())
+            .path("/archive/image.jpg")
+            .sha256(sha256Hash)
+            .isDuplicate(true)
+            .build();
+
+        when(fileRepository.findById(fileId)).thenReturn(Optional.of(originalFile));
+        when(fileRepository.findBySha256(sha256Hash)).thenReturn(allDuplicates);
+        when(fileMapper.toDto(originalFile)).thenReturn(originalDto);
+        when(fileMapper.toDto(duplicate1)).thenReturn(duplicate1Dto);
+        when(fileMapper.toDto(duplicate2)).thenReturn(duplicate2Dto);
+
+        // When
+        List<FileDto> result = fileService.findDuplicates(fileId);
+
+        // Then
+        assertNotNull(result);
+        assertEquals(3, result.size());
+        assertTrue(result.stream().anyMatch(dto -> dto.getId().equals(fileId)));
+        assertTrue(result.stream().anyMatch(dto -> dto.getId().equals(duplicate1.getId())));
+        assertTrue(result.stream().anyMatch(dto -> dto.getId().equals(duplicate2.getId())));
+
+        verify(fileRepository).findById(fileId);
+        verify(fileRepository).findBySha256(sha256Hash);
+        verify(fileMapper, times(3)).toDto(any(ScannedFile.class));
+    }
+
+    @Test
+    void testFindDuplicates_NoDuplicates() {
+        // Given: a file with no duplicates (unique hash)
+        UUID fileId = UUID.randomUUID();
+        String uniqueHash = "unique123...";
+
+        ScannedFile uniqueFile = ScannedFile.builder()
+            .id(fileId)
+            .source(testSource)
+            .path("/photos/unique.jpg")
+            .name("unique.jpg")
+            .sha256(uniqueHash)
+            .size(1024000L)
+            .build();
+
+        FileDto uniqueDto = FileDto.builder()
+            .id(fileId)
+            .path("/photos/unique.jpg")
+            .sha256(uniqueHash)
+            .isDuplicate(false)
+            .build();
+
+        when(fileRepository.findById(fileId)).thenReturn(Optional.of(uniqueFile));
+        when(fileRepository.findBySha256(uniqueHash)).thenReturn(List.of(uniqueFile));
+        when(fileMapper.toDto(uniqueFile)).thenReturn(uniqueDto);
+
+        // When
+        List<FileDto> result = fileService.findDuplicates(fileId);
+
+        // Then
+        assertNotNull(result);
+        assertEquals(1, result.size());
+        assertEquals(fileId, result.get(0).getId());
+        assertFalse(result.get(0).getIsDuplicate());
+
+        verify(fileRepository).findById(fileId);
+        verify(fileRepository).findBySha256(uniqueHash);
+    }
+
+    @Test
+    void testFindDuplicates_FileNotFound() {
+        // Given: non-existent file ID
+        UUID fileId = UUID.randomUUID();
+        when(fileRepository.findById(fileId)).thenReturn(Optional.empty());
+
+        // When/Then
+        IllegalArgumentException exception = assertThrows(
+            IllegalArgumentException.class,
+            () -> fileService.findDuplicates(fileId)
+        );
+
+        assertTrue(exception.getMessage().contains("File not found"));
+        verify(fileRepository).findById(fileId);
+        verify(fileRepository, never()).findBySha256(any());
+    }
 }

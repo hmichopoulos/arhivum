@@ -78,11 +78,50 @@ The user has ~20 external HDDs (mostly 4TB each), multiple cloud accounts (OneDr
 ```
 archivum/
 ├── archivum-server/           # Spring Boot backend
+│   ├── src/main/resources/db/migration/  # Flyway migrations
+│   └── src/test/                         # Unit & integration tests
 ├── archivum-scanner/          # CLI scanner tool
+│   └── src/main/java/.../command/
+│       ├── ScanCommand.java              # Scan directories
+│       └── UploadCommand.java            # Upload scan results
 ├── archivum-ui/               # React frontend
+│   ├── src/api/                          # API clients
+│   ├── src/components/                   # UI components
+│   ├── src/hooks/                        # React Query hooks
+│   ├── src/pages/                        # Page components
+│   └── src/types/                        # TypeScript types
 ├── docs/                      # Documentation
 └── docker-compose.yml         # Deployment
 ```
+
+## Recent Updates (December 2025)
+
+### File Upload System (Milestone 3)
+- ✅ Implemented `upload` command for resilient two-step scanning workflow
+- ✅ Scanner can now upload previously generated scan results
+- ✅ Useful for very large disks: scan first (multi-day), then upload separately with retry
+
+### Web UI Implementation
+- ✅ Complete React-based web interface
+- ✅ Sources management: view, filter, and browse scanned disks
+- ✅ File browser: sortable table with filters (extension, duplicates)
+- ✅ Real-time data with React Query
+- ✅ Responsive design with Tailwind CSS
+- ✅ API integration with backend via Vite proxy
+
+### Backend Enhancements
+- ✅ File batch ingestion endpoints
+- ✅ Source management APIs
+- ✅ Database schema with Flyway migrations
+- ✅ Per-file error handling during ingestion
+- ✅ Source statistics tracking
+- ✅ PostgreSQL with Docker support
+
+### Current Status
+- Scanner: Fully functional with scan + upload commands
+- Backend: REST API operational, file ingestion working
+- Frontend: Sources and files browsing complete
+- Database: Schema validated and migrations working
 
 ## Coding Conventions
 
@@ -223,20 +262,40 @@ Key top-level folders:
 
 ## API Design
 
-### REST Endpoints
+### REST Endpoints (Implemented)
 
 ```
-# Sources
+# Sources (✅ Implemented)
 GET    /api/sources                    # List all scanned sources
 POST   /api/sources                    # Register new source (from scanner)
 GET    /api/sources/{id}               # Get source details
+POST   /api/sources/{id}/complete      # Mark scan as complete
+DELETE /api/sources/{id}               # Delete source and all files
+
+# Files (✅ Implemented)
+POST   /api/files/batch                # Ingest file batch (from scanner)
+GET    /api/files/{id}                 # Get file details by ID
+
+# Code Projects (✅ Implemented)
+GET    /api/code-projects              # List all code projects
+GET    /api/code-projects/{id}         # Get project by ID
+GET    /api/code-projects/source/{id}  # Get projects by source
+GET    /api/code-projects/type/{type}  # Get projects by type
+GET    /api/code-projects/duplicates   # Get duplicate projects
+GET    /api/code-projects/stats        # Get project statistics
+DELETE /api/code-projects/{id}         # Delete project
+```
+
+### REST Endpoints (Planned)
+
+```
+# Sources - Advanced
 GET    /api/sources/{id}/tree          # Get folder tree
 PATCH  /api/sources/{id}/folders/{path}  # Update folder zone
 
-# Files
-GET    /api/files                      # Query files (with filters)
-GET    /api/files/{id}                 # Get file details
-PATCH  /api/files/{id}                 # Update classification
+# Files - Advanced
+GET    /api/files                      # Query files with filters
+PATCH  /api/files/{id}                 # Update file classification
 
 # Duplicates
 GET    /api/duplicates                 # Get duplicate groups
@@ -296,30 +355,68 @@ npm test
 
 ### Prerequisites
 - Java 21
-- Node.js 20+
-- PostgreSQL 16
-- Docker (optional)
+- Node.js 20+ (install via nvm recommended)
+- PostgreSQL 16 (via Docker recommended)
+- Docker (for PostgreSQL)
 
 ### Development
 
+**Step 1: Start PostgreSQL**
 ```bash
-# Start PostgreSQL
 docker run -d --name archivum-db \
   -e POSTGRES_DB=archivum \
   -e POSTGRES_USER=archivum \
   -e POSTGRES_PASSWORD=archivum \
   -p 5432:5432 \
   postgres:16
+```
 
-# Start backend
-cd archivum-server
-./gradlew bootRun
+**Step 2: Start Backend** (from project root)
+```bash
+cd /path/to/archivum
+./gradlew :archivum-server:bootRun
+```
+Backend will be available at: `http://localhost:8080`
 
-# Start frontend
-cd archivum-ui
-npm install
+**Step 3: Start Frontend** (in new terminal)
+```bash
+cd /path/to/archivum/archivum-ui
+npm install  # Only needed first time
 npm run dev
 ```
+Frontend will be available at: `http://localhost:3000`
+
+### Scanner Usage
+
+**Scan a directory:**
+```bash
+cd /path/to/archivum
+./archivum-scanner/build/install/archivum-scanner/bin/archivum-scanner scan /path/to/directory
+```
+
+**Upload previous scan results:**
+```bash
+# Upload single scan
+./archivum-scanner/build/install/archivum-scanner/bin/archivum-scanner upload \
+  ./archivum-scanner/output/[scan-id]
+
+# Upload all scans
+for dir in ./archivum-scanner/output/*/; do
+  if [ -f "$dir/source.json" ]; then
+    ./archivum-scanner/build/install/archivum-scanner/bin/archivum-scanner upload "$dir"
+  fi
+done
+```
+
+### Accessing the Application
+
+Once all services are running:
+- **Web UI**: http://localhost:3000
+  - Sources list: `/sources`
+  - Source details: `/sources/:id`
+  - Code projects: `/code-projects`
+- **API**: http://localhost:8080/api/
+- **Database**: localhost:5432 (user: archivum, password: archivum)
 
 ## Common Tasks
 

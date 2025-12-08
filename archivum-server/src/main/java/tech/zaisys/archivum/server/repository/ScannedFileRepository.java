@@ -150,6 +150,24 @@ public interface ScannedFileRepository extends JpaRepository<ScannedFile, UUID> 
     List<ScannedFile> findAllByOrderByScannedAtDesc();
 
     /**
+     * Query files with optional filters.
+     * All parameters except sourceId are optional (can be null).
+     *
+     * @param sourceId Source ID (required)
+     * @param extension File extension filter (optional)
+     * @param isDuplicate Duplicate filter (optional)
+     * @param pageable Pagination parameters
+     * @return Page of files matching the filters
+     */
+    @Query("SELECT f FROM ScannedFile f WHERE f.source.id = :sourceId " +
+           "AND (:extension IS NULL OR f.extension = :extension) " +
+           "AND (:isDuplicate IS NULL OR f.isDuplicate = :isDuplicate)")
+    Page<ScannedFile> queryFiles(@Param("sourceId") UUID sourceId,
+                                  @Param("extension") String extension,
+                                  @Param("isDuplicate") Boolean isDuplicate,
+                                  Pageable pageable);
+
+    /**
      * Delete all files for a given source.
      * Useful when re-scanning or removing a source.
      *

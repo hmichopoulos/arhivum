@@ -357,6 +357,52 @@ GET /api/sources/{sourceId}/hierarchy
 
 ---
 
+### Get Source Folder Tree
+
+Get hierarchical folder structure for a source.
+
+```
+GET /api/sources/{sourceId}/tree
+```
+
+**Path Parameters:**
+- `sourceId` - UUID of the source
+
+**Response:** `200 OK`
+```json
+{
+  "name": "",
+  "path": "",
+  "type": "FOLDER",
+  "children": [
+    {
+      "name": "photos",
+      "path": "/photos",
+      "type": "FOLDER",
+      "fileCount": 1250,
+      "totalSize": 3500000000,
+      "children": [
+        {
+          "name": "IMG_1234.jpg",
+          "path": "/photos/IMG_1234.jpg",
+          "type": "FILE",
+          "fileId": "660e8400-e29b-41d4-a716-446655440001",
+          "size": 2457600,
+          "extension": "jpg",
+          "isDuplicate": false
+        }
+      ]
+    }
+  ]
+}
+```
+
+**Use Case:**
+
+UI uses this to display hierarchical file browser with folder statistics.
+
+---
+
 ## File Query Endpoints
 
 ### Query Files
@@ -439,6 +485,209 @@ GET /api/files/{fileId}
   "status": "ANALYZED",
   "isDuplicate": false,
   "scannedAt": "2025-11-28T10:15:23Z"
+}
+```
+
+---
+
+### Get File Duplicates
+
+Get all duplicate locations for a file (all files with same SHA-256 hash).
+
+```
+GET /api/files/{fileId}/duplicates
+```
+
+**Path Parameters:**
+- `fileId` - UUID of the file
+
+**Response:** `200 OK`
+```json
+[
+  {
+    "id": "660e8400-e29b-41d4-a716-446655440001",
+    "sourceId": "550e8400-e29b-41d4-a716-446655440000",
+    "path": "/photos/2018/IMG_1234.jpg",
+    "name": "IMG_1234.jpg",
+    "size": 2457600,
+    "sha256": "a1b2c3d4e5f6...",
+    "modifiedAt": "2018-06-15T14:30:00Z",
+    "isDuplicate": true,
+    "scannedAt": "2025-11-28T10:15:23Z"
+  },
+  {
+    "id": "770e8400-e29b-41d4-a716-446655440002",
+    "sourceId": "880e8400-e29b-41d4-a716-446655440003",
+    "path": "/backup/photos/IMG_1234.jpg",
+    "name": "IMG_1234.jpg",
+    "size": 2457600,
+    "sha256": "a1b2c3d4e5f6...",
+    "modifiedAt": "2018-06-15T14:30:00Z",
+    "isDuplicate": true,
+    "scannedAt": "2025-11-29T14:22:11Z"
+  }
+]
+```
+
+**Use Case:**
+
+UI displays all locations where a duplicate file exists when user clicks on duplicate badge.
+
+---
+
+## Code Project Endpoints
+
+### List All Code Projects
+
+Get all detected code projects across all sources.
+
+```
+GET /api/code-projects
+```
+
+**Response:** `200 OK`
+```json
+[
+  {
+    "id": "abc-123-def-456",
+    "sourceId": "550e8400-e29b-41d4-a716-446655440000",
+    "rootPath": "/home/user/projects/my-app",
+    "identity": {
+      "type": "MAVEN",
+      "name": "my-app",
+      "version": "1.0.0",
+      "groupId": "com.example",
+      "identifier": "com.example:my-app:1.0.0"
+    },
+    "contentHash": "xyz789...",
+    "sourceFileCount": 125,
+    "totalFileCount": 450,
+    "totalSizeBytes": 5242880,
+    "scannedAt": "2025-11-28T10:15:23Z"
+  }
+]
+```
+
+---
+
+### Get Code Projects by Source
+
+Get all code projects for a specific source.
+
+```
+GET /api/code-projects/source/{sourceId}
+```
+
+**Path Parameters:**
+- `sourceId` - UUID of the source
+
+**Response:** `200 OK` - Same format as List All Code Projects
+
+---
+
+### Get Duplicate Code Projects
+
+Get code projects grouped by content hash (duplicate projects).
+
+```
+GET /api/code-projects/duplicates
+```
+
+**Response:** `200 OK`
+```json
+{
+  "xyz789...": [
+    {
+      "id": "abc-123-def-456",
+      "sourceId": "550e8400-e29b-41d4-a716-446655440000",
+      "rootPath": "/home/user/projects/my-app",
+      "identity": {
+        "type": "MAVEN",
+        "name": "my-app",
+        "version": "1.0.0"
+      }
+    },
+    {
+      "id": "def-456-ghi-789",
+      "sourceId": "660e8400-e29b-41d4-a716-446655440001",
+      "rootPath": "/backup/projects/my-app",
+      "identity": {
+        "type": "MAVEN",
+        "name": "my-app",
+        "version": "1.0.0"
+      }
+    }
+  ]
+}
+```
+
+---
+
+### Get Code Project Statistics
+
+Get aggregate statistics about code projects.
+
+```
+GET /api/code-projects/stats
+```
+
+**Response:** `200 OK`
+```json
+{
+  "total": 45,
+  "byType": {
+    "MAVEN": 8,
+    "GRADLE": 1,
+    "NPM": 1,
+    "PYTHON": 29,
+    "GIT": 6,
+    "GO": 0,
+    "RUST": 0,
+    "GENERIC": 0
+  },
+  "totalSourceFiles": 12543,
+  "totalSize": 2500000000
+}
+```
+
+---
+
+### Bulk Upload Code Projects
+
+Upload multiple code projects (used by scanner).
+
+```
+POST /api/code-projects/bulk
+```
+
+**Request Body:**
+```json
+[
+  {
+    "sourceId": "550e8400-e29b-41d4-a716-446655440000",
+    "rootPath": "/home/user/projects/my-app",
+    "identity": {
+      "type": "MAVEN",
+      "name": "my-app",
+      "version": "1.0.0",
+      "groupId": "com.example",
+      "identifier": "com.example:my-app:1.0.0"
+    },
+    "contentHash": "xyz789...",
+    "sourceFileCount": 125,
+    "totalFileCount": 450,
+    "totalSizeBytes": 5242880,
+    "scannedAt": "2025-11-28T10:15:23Z"
+  }
+]
+```
+
+**Response:** `201 Created`
+```json
+{
+  "success": true,
+  "count": 45,
+  "message": "Code projects uploaded successfully"
 }
 ```
 

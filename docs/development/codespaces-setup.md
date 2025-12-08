@@ -215,7 +215,7 @@ bash scripts/setup-test-fixtures.sh
 |----------|-------------|---------|
 | `ARCHIVUM_TEST_FIXTURES` | Test fixtures directory | `~/test-fixtures` |
 | `ARCHIVUM_FIXTURES_URL` | Remote fixtures base URL | (none) |
-| `SPRING_DATASOURCE_URL` | PostgreSQL JDBC URL | `jdbc:postgresql://db:5432/archivum` |
+| `SPRING_DATASOURCE_URL` | PostgreSQL JDBC URL | `jdbc:postgresql://localhost:5432/archivum` |
 
 ## Troubleshooting
 
@@ -231,12 +231,22 @@ sudo ln -sf "$PWD/archivum-scanner/build/install/archivum-scanner/bin/archivum-s
 
 Check if PostgreSQL is running:
 ```bash
-docker ps | grep postgres
+docker ps | grep archivum-db
 ```
 
 Restart the database:
 ```bash
-docker compose -f .devcontainer/docker-compose.yml restart db
+docker restart archivum-db
+```
+
+If container doesn't exist, create it:
+```bash
+docker run -d --name archivum-db \
+  -e POSTGRES_DB=archivum \
+  -e POSTGRES_USER=archivum \
+  -e POSTGRES_PASSWORD=archivum \
+  -p 5432:5432 \
+  postgres:16
 ```
 
 ### Port Already in Use

@@ -15,7 +15,7 @@ CREATE TABLE scanned_file (
     size BIGINT NOT NULL,
     sha256 CHAR(64),
     modified_at TIMESTAMP,
-    created_at TIMESTAMP,
+    file_created_at TIMESTAMP,
     accessed_at TIMESTAMP,
 
     -- Content metadata
@@ -29,7 +29,7 @@ CREATE TABLE scanned_file (
 
     -- Timestamps
     scanned_at TIMESTAMP NOT NULL,
-    created_at_db TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
     -- Foreign key constraints
@@ -82,5 +82,6 @@ COMMENT ON COLUMN scanned_file.sha256 IS 'SHA-256 hash in lowercase hex (64 char
 COMMENT ON COLUMN scanned_file.exif_metadata IS 'Full EXIF metadata object as JSONB (cameraMake, gps, etc.)';
 COMMENT ON COLUMN scanned_file.is_duplicate IS 'Flag set by scanner during scan (tracks hashes in-memory)';
 COMMENT ON COLUMN scanned_file.original_file_id IS 'Links to the file we are keeping (if this is a duplicate)';
+COMMENT ON COLUMN scanned_file.file_created_at IS 'When the file was created on disk (from filesystem metadata)';
 COMMENT ON COLUMN scanned_file.scanned_at IS 'When scanner processed this file';
-COMMENT ON COLUMN scanned_file.created_at_db IS 'When this record was created in database';
+COMMENT ON COLUMN scanned_file.created_at IS 'When this record was created in database';

@@ -1,5 +1,6 @@
 package tech.zaisys.archivum.server.controller;
 
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
@@ -10,6 +11,7 @@ import tech.zaisys.archivum.api.dto.FileDto;
 import tech.zaisys.archivum.server.service.FileBatchResult;
 import tech.zaisys.archivum.server.service.FileService;
 
+import java.util.Map;
 import java.util.UUID;
 
 /**
@@ -30,10 +32,10 @@ public class FileController {
      * POST /api/files/batch
      *
      * @param batch Batch of files to ingest
-     * @return Batch ingestion result with success/failure counts
+     * @return Batch ingestion result with success/failure counts, or error message on validation failure
      */
     @PostMapping("/batch")
-    public ResponseEntity<FileBatchResult> ingestBatch(@RequestBody FileBatchDto batch) {
+    public ResponseEntity<?> ingestBatch(@Valid @RequestBody FileBatchDto batch) {
         log.info("POST /api/files/batch - Ingesting {} files for source {} (batch {})",
             batch.getFiles().size(), batch.getSourceId(), batch.getBatchNumber());
 
@@ -42,7 +44,8 @@ public class FileController {
             return ResponseEntity.status(HttpStatus.CREATED).body(result);
         } catch (IllegalArgumentException e) {
             log.error("Batch ingestion failed: {}", e.getMessage());
-            return ResponseEntity.badRequest().build();
+            return ResponseEntity.badRequest()
+                .body(Map.of("error", e.getMessage()));
         }
     }
 

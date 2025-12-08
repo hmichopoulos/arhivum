@@ -116,20 +116,12 @@ public class ScanCommand implements Callable<Integer> {
         }
     }
 
-    /**
-     * Configure logging level based on verbose flag.
-     */
     private void configureLogging() {
         if (verbose) {
             setLogLevel("DEBUG");
         }
     }
 
-    /**
-     * Validate that scan path exists and is a directory.
-     *
-     * @return true if valid, false otherwise
-     */
     private boolean validateScanPath() {
         if (!Files.exists(scanPath)) {
             System.err.println("Error: Path does not exist: " + scanPath);
@@ -144,9 +136,6 @@ public class ScanCommand implements Callable<Integer> {
         return true;
     }
 
-    /**
-     * Print scanner header with version and path.
-     */
     private void printHeader() {
         System.out.println("Archivum Scanner v0.1.0");
         System.out.println("======================");

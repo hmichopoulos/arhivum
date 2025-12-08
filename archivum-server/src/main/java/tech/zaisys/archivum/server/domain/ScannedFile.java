@@ -52,8 +52,8 @@ public class ScannedFile {
     @Column(name = "modified_at")
     private Instant modifiedAt;
 
-    @Column(name = "created_at")
-    private Instant createdAt;
+    @Column(name = "file_created_at")
+    private Instant fileCreatedAt;
 
     @Column(name = "accessed_at")
     private Instant accessedAt;
@@ -84,15 +84,15 @@ public class ScannedFile {
     @Column(name = "scanned_at", nullable = false)
     private Instant scannedAt;
 
-    @Column(name = "created_at_db", nullable = false, updatable = false)
-    private Instant createdAtDb;
+    @Column(name = "created_at", nullable = false, updatable = false)
+    private Instant createdAt;
 
     @Column(name = "updated_at", nullable = false)
     private Instant updatedAt;
 
     @PrePersist
     protected void onCreate() {
-        createdAtDb = Instant.now();
+        createdAt = Instant.now();
         updatedAt = Instant.now();
     }
 

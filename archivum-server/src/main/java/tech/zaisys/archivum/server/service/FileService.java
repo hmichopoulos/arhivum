@@ -48,11 +48,9 @@ public class FileService {
             .orElseThrow(() -> new IllegalArgumentException(
                 "Source not found: " + batch.getSourceId()));
 
-        FileBatchResult result = new FileBatchResult();
-        result.setBatchNumber(batch.getBatchNumber());
-        result.setTotalFiles(batch.getFiles().size());
-
         long totalSize = 0;
+        int successCount = 0;
+        int failureCount = 0;
         List<UUID> successfulIds = new ArrayList<>();
         List<FileBatchResult.FileError> errors = new ArrayList<>();
 
@@ -63,7 +61,7 @@ public class FileService {
                 ScannedFile saved = fileRepository.save(entity);
                 successfulIds.add(saved.getId());
                 totalSize += fileDto.getSize();
-                result.incrementSuccessCount();
+                successCount++;
             } catch (Exception e) {
                 log.warn("Failed to save file {} from batch {}: {}",
                     fileDto.getPath(), batch.getBatchNumber(), e.getMessage());
@@ -71,18 +69,25 @@ public class FileService {
                     fileDto.getPath(),
                     e.getMessage()
                 ));
-                result.incrementFailureCount();
+                failureCount++;
             }
         }
 
         // Update source statistics
-        updateSourceStatistics(source, result.getSuccessCount(), totalSize);
+        updateSourceStatistics(source, successCount, totalSize);
 
-        result.setSuccessfulFileIds(successfulIds);
-        result.setErrors(errors);
+        // Build immutable result
+        FileBatchResult result = FileBatchResult.builder()
+            .batchNumber(batch.getBatchNumber())
+            .totalFiles(batch.getFiles().size())
+            .successCount(successCount)
+            .failureCount(failureCount)
+            .successfulFileIds(successfulIds)
+            .errors(errors)
+            .build();
 
         log.info("Batch {} complete: {} succeeded, {} failed",
-            batch.getBatchNumber(), result.getSuccessCount(), result.getFailureCount());
+            batch.getBatchNumber(), successCount, failureCount);
 
         return result;
     }

@@ -5,6 +5,8 @@ import tech.zaisys.archivum.api.dto.FileDto;
 import tech.zaisys.archivum.server.domain.ScannedFile;
 import tech.zaisys.archivum.server.domain.Source;
 
+import java.util.UUID;
+
 /**
  * Mapper for converting between FileDto and ScannedFile entity.
  */
@@ -28,7 +30,7 @@ public class FileMapper {
             .size(dto.getSize())
             .sha256(dto.getSha256())
             .modifiedAt(dto.getModifiedAt())
-            .createdAt(dto.getCreatedAt())
+            .fileCreatedAt(dto.getCreatedAt())
             .accessedAt(dto.getAccessedAt())
             .mimeType(dto.getMimeType())
             .exifMetadata(dto.getExif())
@@ -40,21 +42,34 @@ public class FileMapper {
 
     /**
      * Convert ScannedFile entity to FileDto.
+     * Note: Assumes source is already loaded to avoid N+1 query.
      *
      * @param entity ScannedFile entity
      * @return FileDto
      */
     public FileDto toDto(ScannedFile entity) {
+        return toDto(entity, entity.getSource().getId());
+    }
+
+    /**
+     * Convert ScannedFile entity to FileDto with explicit sourceId.
+     * Use this variant to avoid lazy loading when source is not fetched.
+     *
+     * @param entity ScannedFile entity
+     * @param sourceId Source ID (avoids lazy load)
+     * @return FileDto
+     */
+    public FileDto toDto(ScannedFile entity, UUID sourceId) {
         return FileDto.builder()
             .id(entity.getId())
-            .sourceId(entity.getSource().getId())
+            .sourceId(sourceId)
             .path(entity.getPath())
             .name(entity.getName())
             .extension(entity.getExtension())
             .size(entity.getSize())
             .sha256(entity.getSha256())
             .modifiedAt(entity.getModifiedAt())
-            .createdAt(entity.getCreatedAt())
+            .createdAt(entity.getFileCreatedAt())
             .accessedAt(entity.getAccessedAt())
             .mimeType(entity.getMimeType())
             .exif(entity.getExifMetadata())

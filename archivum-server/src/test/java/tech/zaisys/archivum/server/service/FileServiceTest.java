@@ -86,8 +86,7 @@ class FileServiceTest {
     @Test
     void testIngestBatch_Success() {
         // Given
-        List<FileDto> files = new ArrayList<>();
-        files.add(testFileDto);
+        List<FileDto> files = List.of(testFileDto);
 
         FileBatchDto batch = FileBatchDto.builder()
             .sourceId(sourceId)

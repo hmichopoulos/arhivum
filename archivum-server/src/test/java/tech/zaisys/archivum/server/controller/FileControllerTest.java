@@ -76,12 +76,14 @@ class FileControllerTest {
     @Test
     void testIngestBatch_Success() throws Exception {
         // Given
-        FileBatchResult result = new FileBatchResult();
-        result.setBatchNumber(1);
-        result.setTotalFiles(1);
-        result.setSuccessCount(1);
-        result.setFailureCount(0);
-        result.setSuccessfulFileIds(List.of(fileId));
+        FileBatchResult result = FileBatchResult.builder()
+            .batchNumber(1)
+            .totalFiles(1)
+            .successCount(1)
+            .failureCount(0)
+            .successfulFileIds(List.of(fileId))
+            .errors(List.of())
+            .build();
 
         when(fileService.ingestBatch(any(FileBatchDto.class))).thenReturn(result);
 
@@ -100,15 +102,16 @@ class FileControllerTest {
     @Test
     void testIngestBatch_PartialFailure() throws Exception {
         // Given
-        FileBatchResult result = new FileBatchResult();
-        result.setBatchNumber(1);
-        result.setTotalFiles(2);
-        result.setSuccessCount(1);
-        result.setFailureCount(1);
-        result.setSuccessfulFileIds(List.of(fileId));
-        result.setErrors(List.of(
-            new FileBatchResult.FileError("invalid/file.jpg", "Database error")
-        ));
+        FileBatchResult result = FileBatchResult.builder()
+            .batchNumber(1)
+            .totalFiles(2)
+            .successCount(1)
+            .failureCount(1)
+            .successfulFileIds(List.of(fileId))
+            .errors(List.of(
+                new FileBatchResult.FileError("invalid/file.jpg", "Database error")
+            ))
+            .build();
 
         when(fileService.ingestBatch(any(FileBatchDto.class))).thenReturn(result);
 
@@ -146,11 +149,14 @@ class FileControllerTest {
             .files(List.of(testFileDto))
             .build();
 
-        FileBatchResult result = new FileBatchResult();
-        result.setBatchNumber(1);
-        result.setTotalFiles(1);
-        result.setSuccessCount(1);
-        result.setSuccessfulFileIds(List.of(fileId));
+        FileBatchResult result = FileBatchResult.builder()
+            .batchNumber(1)
+            .totalFiles(1)
+            .successCount(1)
+            .failureCount(0)
+            .successfulFileIds(List.of(fileId))
+            .errors(List.of())
+            .build();
 
         when(fileService.ingestBatch(any(FileBatchDto.class))).thenReturn(result);
 

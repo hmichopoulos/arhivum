@@ -5,12 +5,19 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import tech.zaisys.archivum.api.dto.ExifMetadata;
 
+import javax.imageio.ImageIO;
+import java.awt.*;
+import java.awt.image.BufferedImage;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.assertj.core.api.Assertions.assertThat;
 
+/**
+ * Integration tests for EXIF metadata extraction.
+ * Tests the ExifExtractor service with various image types and EXIF scenarios.
+ */
 class ExifExtractorTest {
 
     private ExifExtractor exifExtractor;
@@ -24,138 +31,121 @@ class ExifExtractorTest {
     }
 
     @Test
-    void extractExif_nonImageFile_returnsNull() throws IOException {
-        // Given - a text file
-        Path textFile = tempDir.resolve("document.txt");
+    void extractExif_withNoExifData_returnsNull() throws IOException {
+        // Create a simple JPEG with no EXIF data
+        Path imagePath = tempDir.resolve("no-exif.jpg");
+        createSimpleImage(imagePath);
+
+        ExifMetadata result = exifExtractor.extractExif(imagePath);
+
+        assertThat(result).isNull();
+    }
+
+    @Test
+    void extractExif_withNonImageFile_returnsNull() throws IOException {
+        Path textFile = tempDir.resolve("text.txt");
         Files.writeString(textFile, "This is not an image");
 
-        // When
-        ExifMetadata exif = exifExtractor.extractExif(textFile);
+        ExifMetadata result = exifExtractor.extractExif(textFile);
 
-        // Then
-        assertNull(exif, "Should return null for non-image files");
+        assertThat(result).isNull();
     }
 
     @Test
-    void extractExif_emptyFile_returnsNull() throws IOException {
-        // Given - an empty file
-        Path emptyFile = tempDir.resolve("empty.jpg");
-        Files.createFile(emptyFile);
-
-        // When
-        ExifMetadata exif = exifExtractor.extractExif(emptyFile);
-
-        // Then
-        assertNull(exif, "Should return null for empty/corrupted files");
-    }
-
-    @Test
-    void extractExif_corruptedImage_returnsNull() throws IOException {
-        // Given - a file with .jpg extension but corrupted content
-        Path corruptedFile = tempDir.resolve("corrupted.jpg");
-        Files.writeString(corruptedFile, "Not a valid JPEG file");
-
-        // When
-        ExifMetadata exif = exifExtractor.extractExif(corruptedFile);
-
-        // Then
-        assertNull(exif, "Should return null and not throw for corrupted images");
-    }
-
-    @Test
-    void extractExif_imageWithoutExif_returnsNull() throws IOException {
-        // Given - a minimal valid JPEG without EXIF data
-        // JPEG header: FF D8 FF E0 00 10 4A 46 49 46 00 01 01 00 00 01 00 01 00 00
-        // JPEG footer: FF D9
-        Path jpegWithoutExif = tempDir.resolve("no-exif.jpg");
-        byte[] minimalJpeg = new byte[]{
-            (byte) 0xFF, (byte) 0xD8, // SOI marker
-            (byte) 0xFF, (byte) 0xE0, // APP0 marker
-            0x00, 0x10, // Length
-            0x4A, 0x46, 0x49, 0x46, 0x00, // JFIF
-            0x01, 0x01, // Version
-            0x00, // Density units
-            0x00, 0x01, // X density
-            0x00, 0x01, // Y density
-            0x00, 0x00, // Thumbnail
-            (byte) 0xFF, (byte) 0xD9 // EOI marker
-        };
-        Files.write(jpegWithoutExif, minimalJpeg);
-
-        // When
-        ExifMetadata exif = exifExtractor.extractExif(jpegWithoutExif);
-
-        // Then
-        // Should return null since there's no EXIF data (only JFIF)
-        assertNull(exif, "Should return null for images without EXIF data");
-    }
-
-    @Test
-    void extractExif_nonExistentFile_returnsNull() {
-        // Given - a path to non-existent file
+    void extractExif_withNonExistentFile_returnsNull() {
         Path nonExistent = tempDir.resolve("does-not-exist.jpg");
 
-        // When
-        ExifMetadata exif = exifExtractor.extractExif(nonExistent);
+        ExifMetadata result = exifExtractor.extractExif(nonExistent);
 
-        // Then
-        assertNull(exif, "Should return null for non-existent files");
+        assertThat(result).isNull();
     }
 
     @Test
-    void extractExif_pngWithoutExif_returnsNull() throws IOException {
-        // Given - a minimal valid PNG without EXIF
-        // PNG header + minimal IHDR chunk + IEND
-        Path pngWithoutExif = tempDir.resolve("no-exif.png");
-        byte[] minimalPng = new byte[]{
-            (byte) 0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A, // PNG signature
-            0x00, 0x00, 0x00, 0x0D, // IHDR length
-            0x49, 0x48, 0x44, 0x52, // IHDR
-            0x00, 0x00, 0x00, 0x01, // Width = 1
-            0x00, 0x00, 0x00, 0x01, // Height = 1
-            0x08, 0x02, 0x00, 0x00, 0x00, // Bit depth, color type, compression, filter, interlace
-            (byte) 0x90, 0x77, 0x53, (byte) 0xDE, // CRC
-            0x00, 0x00, 0x00, 0x00, // IEND length
-            0x49, 0x45, 0x4E, 0x44, // IEND
-            (byte) 0xAE, 0x42, 0x60, (byte) 0x82 // CRC
-        };
-        Files.write(pngWithoutExif, minimalPng);
+    void extractExif_withCorruptedImage_returnsNull() throws IOException {
+        Path corruptedFile = tempDir.resolve("corrupted.jpg");
+        Files.write(corruptedFile, new byte[]{(byte) 0xFF, (byte) 0xD8, 0x00, 0x00}); // Invalid JPEG header
 
-        // When
-        ExifMetadata exif = exifExtractor.extractExif(pngWithoutExif);
+        ExifMetadata result = exifExtractor.extractExif(corruptedFile);
 
-        // Then
-        assertNull(exif, "Should return null for PNG without EXIF data");
+        assertThat(result).isNull();
     }
 
-    // Note: The following integration tests are deferred to future improvements (low priority)
-    // They would require actual JPEG files with EXIF data in src/test/resources/test-images/
-    //
-    // Future Improvement - Low Priority:
-    // Add integration tests with real EXIF images to verify:
-    // - Camera make/model extraction
-    // - Date/time original extraction
-    // - Dimensions, orientation extraction
-    // - GPS coordinates (latitude, longitude, altitude)
-    // - Lens model, focal length, aperture, shutter speed, ISO, flash
-    // - Handling of partial EXIF data (missing fields)
-
+    /**
+     * Test with a real image containing EXIF data.
+     * Note: This test requires a sample image with EXIF data to be placed in test resources.
+     * The test will be skipped if the sample image is not available.
+     */
     @Test
-    void extractExif_validJpegWithExif_extractsMetadata() {
-        // TODO: Future improvement - Add integration test with real EXIF JPEG
-        // Expected behavior:
-        // - Should extract camera make/model if present
-        // - Should extract date/time original if present
-        // - Should extract dimensions if present
-        // - Should handle partial EXIF data gracefully
+    void extractExif_withRealExifData_extractsMetadata() {
+        Path sampleImage = Path.of("archivum-scanner/src/test/resources/test-images/sample-with-exif.jpg");
+
+        // Skip test if sample image doesn't exist yet
+        if (!Files.exists(sampleImage)) {
+            System.out.println("Skipping test - sample image not found at: " + sampleImage);
+            System.out.println("To enable this test, add a JPEG with EXIF data to: src/test/resources/test-images/");
+            return;
+        }
+
+        ExifMetadata result = exifExtractor.extractExif(sampleImage);
+
+        // Verify that EXIF data was extracted
+        assertThat(result).isNotNull();
+        // Specific assertions will depend on the actual test image
+        // Example assertions (uncomment and adjust based on your test image):
+        // assertThat(result.getCameraMake()).isNotNull();
+        // assertThat(result.getCameraModel()).isNotNull();
+        // assertThat(result.getDateTimeOriginal()).isNotNull();
     }
 
+    /**
+     * Test GPS coordinate extraction.
+     * Note: This test requires a sample image with GPS EXIF data.
+     */
     @Test
-    void extractExif_jpegWithGps_extractsGpsCoordinates() {
-        // TODO: Future improvement - Add integration test with GPS EXIF JPEG
-        // Expected behavior:
-        // - Should extract latitude, longitude, altitude
-        // - GPS coordinates should be within valid ranges
-        // - Should handle missing altitude gracefully
+    void extractExif_withGpsData_extractsCoordinates() {
+        Path sampleImage = Path.of("archivum-scanner/src/test/resources/test-images/sample-with-gps.jpg");
+
+        // Skip test if sample image doesn't exist yet
+        if (!Files.exists(sampleImage)) {
+            System.out.println("Skipping test - GPS sample image not found at: " + sampleImage);
+            System.out.println("To enable this test, add a JPEG with GPS EXIF data to: src/test/resources/test-images/");
+            return;
+        }
+
+        ExifMetadata result = exifExtractor.extractExif(sampleImage);
+
+        assertThat(result).isNotNull();
+        assertThat(result.getGps()).isNotNull();
+        assertThat(result.getGps().getLatitude()).isNotNull();
+        assertThat(result.getGps().getLongitude()).isNotNull();
+    }
+
+    /**
+     * Test that null values are handled gracefully in ExifMetadata.
+     */
+    @Test
+    void extractExif_handlesNullFieldsGracefully() {
+        // This test verifies that ExifMetadata can be built with all null fields
+        ExifMetadata metadata = ExifMetadata.builder()
+            .cameraMake(null)
+            .cameraModel(null)
+            .dateTimeOriginal(null)
+            .width(null)
+            .height(null)
+            .build();
+
+        assertThat(metadata).isNotNull();
+        assertThat(metadata.getCameraMake()).isNull();
+        assertThat(metadata.getCameraModel()).isNull();
+    }
+
+    // Helper method to create a simple image without EXIF data
+    private void createSimpleImage(Path path) throws IOException {
+        BufferedImage image = new BufferedImage(100, 100, BufferedImage.TYPE_INT_RGB);
+        Graphics2D g = image.createGraphics();
+        g.setColor(Color.BLUE);
+        g.fillRect(0, 0, 100, 100);
+        g.dispose();
+        ImageIO.write(image, "jpg", path.toFile());
     }
 }

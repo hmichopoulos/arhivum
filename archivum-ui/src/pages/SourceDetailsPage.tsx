@@ -7,6 +7,7 @@ import { useNavigate } from 'react-router-dom';
 import { useSource, useSourceTree } from '../hooks/useSources';
 import { useProjectsBySource } from '../hooks/useCodeProjects';
 import { TreeView } from '../components/TreeView';
+import { FileDetailsModal } from '../components/FileDetailsModal';
 import { ScanStatus } from '../types/source';
 
 type SourceDetailsPageProps = {
@@ -18,6 +19,8 @@ export function SourceDetailsPage({ sourceId }: SourceDetailsPageProps) {
   const { data: source, isLoading: sourceLoading } = useSource(sourceId);
   const { data: tree, isLoading: treeLoading } = useSourceTree(sourceId);
   const { data: codeProjects = [] } = useProjectsBySource(sourceId);
+  const [selectedFileId, setSelectedFileId] = useState<string | null>(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
 
   const formatBytes = (bytes: number): string => {
     if (bytes === 0) return '0 B';
@@ -48,8 +51,13 @@ export function SourceDetailsPage({ sourceId }: SourceDetailsPageProps) {
   };
 
   const handleFileClick = (fileId: string) => {
-    // TODO: Implement file details modal or navigation
-    console.log('File clicked:', fileId);
+    setSelectedFileId(fileId);
+    setIsModalOpen(true);
+  };
+
+  const handleCloseModal = () => {
+    setIsModalOpen(false);
+    setSelectedFileId(null);
   };
 
   if (sourceLoading) {
@@ -212,6 +220,13 @@ export function SourceDetailsPage({ sourceId }: SourceDetailsPageProps) {
           )}
         </div>
       </div>
+
+      {/* File Details Modal */}
+      <FileDetailsModal
+        isOpen={isModalOpen}
+        onClose={handleCloseModal}
+        fileId={selectedFileId}
+      />
     </div>
   );
 }

@@ -8,6 +8,8 @@ This directory contains all project documentation, organized by component.
 docs/
 ├── README.md                    # This file
 ├── PROJECT.md                   # High-level project overview
+├── development/                 # Development guides
+│   └── codespaces-setup.md
 ├── scanner/                     # Scanner-specific documentation
 │   ├── README.md
 │   ├── REQUIREMENTS.md
@@ -45,3 +47,4 @@ docs/
 
 ### Development
 - [CLAUDE.md](../CLAUDE.md) - Coding conventions and development guide
+- [Codespaces Setup](development/codespaces-setup.md) - GitHub Codespaces development guide

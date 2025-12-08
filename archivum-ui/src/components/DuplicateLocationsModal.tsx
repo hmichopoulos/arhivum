@@ -4,6 +4,7 @@
 
 import { useEffect } from 'react';
 import type { ScannedFile } from '../types/file';
+import { formatBytes, formatDate } from '../utils/formatters';
 
 type DuplicateLocationsModalProps = {
   isOpen: boolean;
@@ -41,19 +42,6 @@ export function DuplicateLocationsModal({
   }, [isOpen, onClose]);
 
   if (!isOpen) return null;
-
-  const formatBytes = (bytes?: number): string => {
-    if (!bytes) return '0 B';
-    const k = 1024;
-    const sizes = ['B', 'KB', 'MB', 'GB'];
-    const i = Math.floor(Math.log(bytes) / Math.log(k));
-    return `${(bytes / Math.pow(k, i)).toFixed(1)} ${sizes[i]}`;
-  };
-
-  const formatDate = (dateString?: string): string => {
-    if (!dateString) return 'N/A';
-    return new Date(dateString).toLocaleString();
-  };
 
   return (
     <div className="fixed inset-0 z-50 overflow-y-auto">

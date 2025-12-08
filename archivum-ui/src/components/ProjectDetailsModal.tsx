@@ -4,6 +4,7 @@
 
 import { useEffect } from 'react';
 import type { CodeProject, ProjectType } from '../types/codeProject';
+import { formatBytes, formatDate } from '../utils/formatters';
 
 type ProjectDetailsModalProps = {
   isOpen: boolean;
@@ -39,17 +40,6 @@ export function ProjectDetailsModal({
   }, [isOpen, onClose]);
 
   if (!isOpen || !project) return null;
-
-  const formatBytes = (bytes: number): string => {
-    const k = 1024;
-    const sizes = ['B', 'KB', 'MB', 'GB'];
-    const i = Math.floor(Math.log(bytes) / Math.log(k));
-    return `${(bytes / Math.pow(k, i)).toFixed(2)} ${sizes[i]}`;
-  };
-
-  const formatDate = (dateString: string): string => {
-    return new Date(dateString).toLocaleString();
-  };
 
   return (
     <div className="fixed inset-0 z-50 overflow-y-auto">

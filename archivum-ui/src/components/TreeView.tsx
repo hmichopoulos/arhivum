@@ -10,6 +10,7 @@ import { getFileDuplicates } from '../api/files';
 import { DuplicateLocationsModal } from './DuplicateLocationsModal';
 import { ProjectDetailsModal } from './ProjectDetailsModal';
 import { getFileIcon, getProjectTypeIcon, FOLDER_ICON, OPEN_FOLDER_ICON } from '../utils/fileIcons';
+import { formatBytes } from '../utils/formatters';
 
 type TreeViewProps = {
   tree: FolderNode;
@@ -157,14 +158,6 @@ type TreeNodeProps = {
 
 function TreeNode({ node, level, codeProjects, onFileClick, onDuplicateClick, onProjectClick, getProjectTypeColor }: TreeNodeProps) {
   const [isExpanded, setIsExpanded] = useState(level < 2); // Auto-expand first 2 levels
-
-  const formatBytes = (bytes?: number): string => {
-    if (!bytes) return '';
-    const k = 1024;
-    const sizes = ['B', 'KB', 'MB', 'GB'];
-    const i = Math.floor(Math.log(bytes) / Math.log(k));
-    return `${(bytes / Math.pow(k, i)).toFixed(1)} ${sizes[i]}`;
-  };
 
   // Check if this folder is a code project
   const codeProject = node.type === NodeType.FOLDER

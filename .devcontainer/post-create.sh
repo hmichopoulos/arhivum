@@ -6,6 +6,26 @@ set -e
 
 echo "=== Archivum Development Environment Setup ==="
 
+# Start PostgreSQL container
+echo "Starting PostgreSQL..."
+docker run -d --name archivum-db \
+  -e POSTGRES_DB=archivum \
+  -e POSTGRES_USER=archivum \
+  -e POSTGRES_PASSWORD=archivum \
+  -p 5432:5432 \
+  --restart unless-stopped \
+  postgres:16
+
+# Wait for PostgreSQL to be ready
+echo "Waiting for PostgreSQL to be ready..."
+for i in {1..30}; do
+  if docker exec archivum-db pg_isready -U archivum -d archivum > /dev/null 2>&1; then
+    echo "PostgreSQL is ready!"
+    break
+  fi
+  sleep 1
+done
+
 # Build all Gradle projects
 echo "Building Gradle projects..."
 ./gradlew build -x test

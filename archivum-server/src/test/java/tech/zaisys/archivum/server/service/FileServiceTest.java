@@ -13,6 +13,7 @@ import tech.zaisys.archivum.api.enums.ScanStatus;
 import tech.zaisys.archivum.api.enums.SourceType;
 import tech.zaisys.archivum.server.domain.ScannedFile;
 import tech.zaisys.archivum.server.domain.Source;
+import tech.zaisys.archivum.server.mapper.FileMapper;
 import tech.zaisys.archivum.server.repository.ScannedFileRepository;
 import tech.zaisys.archivum.server.repository.SourceRepository;
 
@@ -37,6 +38,9 @@ class FileServiceTest {
 
     @Mock
     private SourceRepository sourceRepository;
+
+    @Mock
+    private FileMapper fileMapper;
 
     @InjectMocks
     private FileService fileService;
@@ -91,7 +95,16 @@ class FileServiceTest {
             .files(files)
             .build();
 
+        ScannedFile mockEntity = ScannedFile.builder()
+            .id(testFileDto.getId())
+            .source(testSource)
+            .path(testFileDto.getPath())
+            .size(testFileDto.getSize())
+            .isDuplicate(false)
+            .build();
+
         when(sourceRepository.findById(sourceId)).thenReturn(Optional.of(testSource));
+        when(fileMapper.toEntity(any(FileDto.class), any(Source.class))).thenReturn(mockEntity);
         when(fileRepository.save(any(ScannedFile.class))).thenAnswer(invocation -> {
             ScannedFile file = invocation.getArgument(0);
             return file;
@@ -141,7 +154,22 @@ class FileServiceTest {
             .files(files)
             .build();
 
+        ScannedFile validEntity = ScannedFile.builder()
+            .id(validFile.getId())
+            .source(testSource)
+            .size(validFile.getSize())
+            .build();
+
+        ScannedFile invalidEntity = ScannedFile.builder()
+            .id(invalidFile.getId())
+            .source(testSource)
+            .size(invalidFile.getSize())
+            .build();
+
         when(sourceRepository.findById(sourceId)).thenReturn(Optional.of(testSource));
+        when(fileMapper.toEntity(any(FileDto.class), any(Source.class)))
+            .thenReturn(validEntity)
+            .thenReturn(invalidEntity);
         when(fileRepository.save(any(ScannedFile.class)))
             .thenAnswer(invocation -> invocation.getArgument(0)) // First file succeeds
             .thenThrow(new RuntimeException("Database error")); // Second file fails
@@ -194,7 +222,15 @@ class FileServiceTest {
             .files(List.of(testFileDto))
             .build();
 
+        ScannedFile duplicateEntity = ScannedFile.builder()
+            .id(testFileDto.getId())
+            .source(testSource)
+            .isDuplicate(true)
+            .size(testFileDto.getSize())
+            .build();
+
         when(sourceRepository.findById(sourceId)).thenReturn(Optional.of(testSource));
+        when(fileMapper.toEntity(any(FileDto.class), any(Source.class))).thenReturn(duplicateEntity);
         when(fileRepository.save(any(ScannedFile.class))).thenAnswer(invocation -> {
             ScannedFile file = invocation.getArgument(0);
             // Verify isDuplicate is true from scanner
@@ -221,7 +257,15 @@ class FileServiceTest {
             .files(List.of(testFileDto))
             .build();
 
+        ScannedFile entityWithDefaultFalse = ScannedFile.builder()
+            .id(testFileDto.getId())
+            .source(testSource)
+            .isDuplicate(false)
+            .size(testFileDto.getSize())
+            .build();
+
         when(sourceRepository.findById(sourceId)).thenReturn(Optional.of(testSource));
+        when(fileMapper.toEntity(any(FileDto.class), any(Source.class))).thenReturn(entityWithDefaultFalse);
         when(fileRepository.save(any(ScannedFile.class))).thenAnswer(invocation -> {
             ScannedFile file = invocation.getArgument(0);
             // Verify isDuplicate defaults to false
@@ -254,7 +298,17 @@ class FileServiceTest {
             .scannedAt(Instant.now())
             .build();
 
+        FileDto expectedDto = FileDto.builder()
+            .id(fileId)
+            .sourceId(sourceId)
+            .path("photos/test.jpg")
+            .name("test.jpg")
+            .extension("jpg")
+            .size(1024000L)
+            .build();
+
         when(fileRepository.findById(fileId)).thenReturn(Optional.of(entity));
+        when(fileMapper.toDto(entity)).thenReturn(expectedDto);
 
         // When
         Optional<FileDto> result = fileService.findById(fileId);
@@ -267,6 +321,7 @@ class FileServiceTest {
         assertEquals(sourceId, result.get().getSourceId());
 
         verify(fileRepository).findById(fileId);
+        verify(fileMapper).toDto(entity);
     }
 
     @Test
@@ -308,7 +363,17 @@ class FileServiceTest {
             .scannedAt(Instant.now())
             .build();
 
+        FileDto duplicateDto = FileDto.builder()
+            .id(duplicate.getId())
+            .sourceId(sourceId)
+            .path("photos/duplicate.jpg")
+            .name("duplicate.jpg")
+            .isDuplicate(true)
+            .originalFileId(original.getId())
+            .build();
+
         when(fileRepository.findById(duplicate.getId())).thenReturn(Optional.of(duplicate));
+        when(fileMapper.toDto(duplicate)).thenReturn(duplicateDto);
 
         // When
         Optional<FileDto> result = fileService.findById(duplicate.getId());
@@ -317,5 +382,6 @@ class FileServiceTest {
         assertTrue(result.isPresent());
         assertTrue(result.get().getIsDuplicate());
         assertEquals(original.getId(), result.get().getOriginalFileId());
+        verify(fileMapper).toDto(duplicate);
     }
 }

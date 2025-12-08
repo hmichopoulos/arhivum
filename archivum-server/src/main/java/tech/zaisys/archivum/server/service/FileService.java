@@ -8,6 +8,7 @@ import tech.zaisys.archivum.api.dto.FileBatchDto;
 import tech.zaisys.archivum.api.dto.FileDto;
 import tech.zaisys.archivum.server.domain.ScannedFile;
 import tech.zaisys.archivum.server.domain.Source;
+import tech.zaisys.archivum.server.mapper.FileMapper;
 import tech.zaisys.archivum.server.repository.ScannedFileRepository;
 import tech.zaisys.archivum.server.repository.SourceRepository;
 
@@ -27,6 +28,7 @@ public class FileService {
 
     private final ScannedFileRepository fileRepository;
     private final SourceRepository sourceRepository;
+    private final FileMapper fileMapper;
 
     /**
      * Ingest a batch of files from the scanner.
@@ -57,7 +59,7 @@ public class FileService {
         // Process each file individually (per-file error handling)
         for (FileDto fileDto : batch.getFiles()) {
             try {
-                ScannedFile entity = toEntity(fileDto, source);
+                ScannedFile entity = fileMapper.toEntity(fileDto, source);
                 ScannedFile saved = fileRepository.save(entity);
                 successfulIds.add(saved.getId());
                 totalSize += fileDto.getSize();
@@ -106,61 +108,6 @@ public class FileService {
      */
     @Transactional(readOnly = true)
     public Optional<FileDto> findById(UUID id) {
-        return fileRepository.findById(id).map(this::toDto);
-    }
-
-    /**
-     * Convert FileDto to ScannedFile entity.
-     *
-     * @param dto FileDto from scanner
-     * @param source Source entity
-     * @return ScannedFile entity
-     */
-    private ScannedFile toEntity(FileDto dto, Source source) {
-        return ScannedFile.builder()
-            .id(dto.getId())
-            .source(source)
-            .path(dto.getPath())
-            .name(dto.getName())
-            .extension(dto.getExtension())
-            .size(dto.getSize())
-            .sha256(dto.getSha256())
-            .modifiedAt(dto.getModifiedAt())
-            .createdAt(dto.getCreatedAt())
-            .accessedAt(dto.getAccessedAt())
-            .mimeType(dto.getMimeType())
-            .exifMetadata(dto.getExif())
-            .status(dto.getStatus())
-            .isDuplicate(dto.getIsDuplicate() != null ? dto.getIsDuplicate() : false)
-            .scannedAt(dto.getScannedAt())
-            .build();
-    }
-
-    /**
-     * Convert ScannedFile entity to FileDto.
-     *
-     * @param entity ScannedFile entity
-     * @return FileDto
-     */
-    private FileDto toDto(ScannedFile entity) {
-        return FileDto.builder()
-            .id(entity.getId())
-            .sourceId(entity.getSource().getId())
-            .path(entity.getPath())
-            .name(entity.getName())
-            .extension(entity.getExtension())
-            .size(entity.getSize())
-            .sha256(entity.getSha256())
-            .modifiedAt(entity.getModifiedAt())
-            .createdAt(entity.getCreatedAt())
-            .accessedAt(entity.getAccessedAt())
-            .mimeType(entity.getMimeType())
-            .exif(entity.getExifMetadata())
-            .status(entity.getStatus())
-            .isDuplicate(entity.getIsDuplicate())
-            .originalFileId(entity.getOriginalFile() != null ?
-                entity.getOriginalFile().getId() : null)
-            .scannedAt(entity.getScannedAt())
-            .build();
+        return fileRepository.findById(id).map(fileMapper::toDto);
     }
 }

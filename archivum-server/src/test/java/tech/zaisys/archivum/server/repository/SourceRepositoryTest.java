@@ -23,9 +23,13 @@ import static org.junit.jupiter.api.Assertions.*;
 
 /**
  * Integration tests for SourceRepository using Testcontainers.
+ * These tests require Docker to be running.
+ *
+ * To run these tests locally, ensure Docker is running.
+ * These tests will be skipped in CI/environments without Docker unless TESTCONTAINERS_ENABLED=true.
  */
 @DataJpaTest
-@Testcontainers
+@Testcontainers(disabledWithoutDocker = true)
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
 class SourceRepositoryTest {
 

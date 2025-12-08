@@ -4,11 +4,14 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import tech.zaisys.archivum.api.dto.CompleteScanRequest;
 import tech.zaisys.archivum.api.dto.CreateSourceRequest;
 import tech.zaisys.archivum.api.dto.SourceDto;
+import tech.zaisys.archivum.api.enums.ScanStatus;
 import tech.zaisys.archivum.server.domain.Source;
 import tech.zaisys.archivum.server.repository.SourceRepository;
 
+import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -147,6 +150,36 @@ public class SourceService {
             source.getName(), source.getChildren().size());
 
         sourceRepository.delete(source);
+    }
+
+    /**
+     * Mark a source scan as complete.
+     * Updates final statistics and status.
+     *
+     * @param sourceId Source ID
+     * @param request Completion request with final statistics
+     * @return Updated source DTO
+     */
+    @Transactional
+    public SourceDto completeScan(UUID sourceId, CompleteScanRequest request) {
+        Source source = sourceRepository.findById(sourceId)
+            .orElseThrow(() -> new IllegalArgumentException("Source not found: " + sourceId));
+
+        source.setTotalFiles(request.getTotalFiles());
+        source.setTotalSize(request.getTotalSize());
+        source.setScanCompletedAt(Instant.now());
+
+        if (request.getSuccess()) {
+            source.setStatus(ScanStatus.COMPLETED);
+        } else {
+            source.setStatus(ScanStatus.FAILED);
+        }
+
+        Source saved = sourceRepository.save(source);
+        log.info("Completed scan for source {}: {} files, {} bytes, status={}",
+            source.getName(), request.getTotalFiles(), request.getTotalSize(), source.getStatus());
+
+        return toDto(saved);
     }
 
     /**

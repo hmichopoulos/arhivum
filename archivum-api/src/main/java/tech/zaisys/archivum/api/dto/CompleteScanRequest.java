@@ -5,10 +5,9 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-import java.util.UUID;
-
 /**
- * Request to mark a scan as completed.
+ * Request to mark a scan as complete.
+ * Sent by scanner when all files have been processed.
  */
 @Data
 @Builder
@@ -17,27 +16,17 @@ import java.util.UUID;
 public class CompleteScanRequest {
 
     /**
-     * Source ID being completed
-     */
-    private UUID sourceId;
-
-    /**
-     * Total number of files scanned
+     * Total number of files discovered and scanned.
      */
     private Long totalFiles;
 
     /**
-     * Total size in bytes
+     * Total size of all files in bytes.
      */
     private Long totalSize;
 
     /**
-     * Whether scan completed successfully
+     * Whether the scan completed successfully.
      */
     private Boolean success;
-
-    /**
-     * Error message if failed
-     */
-    private String errorMessage;
 }

@@ -8,6 +8,7 @@ import { CodeProject, ProjectType } from '../types/codeProject';
 import { ScannedFile } from '../types/file';
 import { getFileDuplicates } from '../api/files';
 import { DuplicateLocationsModal } from './DuplicateLocationsModal';
+import { ProjectDetailsModal } from './ProjectDetailsModal';
 import { getFileIcon, getProjectTypeIcon, FOLDER_ICON, OPEN_FOLDER_ICON } from '../utils/fileIcons';
 
 type TreeViewProps = {
@@ -29,6 +30,14 @@ export function TreeView({ tree, codeProjects = [], onFileClick }: TreeViewProps
     duplicates: [],
     isLoading: false,
     error: null
+  });
+
+  const [projectModalState, setProjectModalState] = useState<{
+    isOpen: boolean;
+    project: CodeProject | null;
+  }>({
+    isOpen: false,
+    project: null
   });
 
   const handleDuplicateClick = async (fileId: string) => {
@@ -65,6 +74,34 @@ export function TreeView({ tree, codeProjects = [], onFileClick }: TreeViewProps
     });
   };
 
+  const handleProjectClick = (project: CodeProject) => {
+    setProjectModalState({
+      isOpen: true,
+      project
+    });
+  };
+
+  const handleCloseProjectModal = () => {
+    setProjectModalState({
+      isOpen: false,
+      project: null
+    });
+  };
+
+  const getProjectTypeColor = (type: ProjectType): string => {
+    switch (type) {
+      case ProjectType.MAVEN: return 'bg-orange-100 text-orange-800';
+      case ProjectType.GRADLE: return 'bg-green-100 text-green-800';
+      case ProjectType.NPM: return 'bg-red-100 text-red-800';
+      case ProjectType.PYTHON: return 'bg-blue-100 text-blue-800';
+      case ProjectType.GO: return 'bg-cyan-100 text-cyan-800';
+      case ProjectType.RUST: return 'bg-amber-100 text-amber-800';
+      case ProjectType.GIT: return 'bg-gray-100 text-gray-800';
+      case ProjectType.GENERIC: return 'bg-purple-100 text-purple-800';
+      default: return 'bg-gray-100 text-gray-800';
+    }
+  };
+
   return (
     <>
       <div className="font-mono text-sm">
@@ -77,6 +114,8 @@ export function TreeView({ tree, codeProjects = [], onFileClick }: TreeViewProps
               codeProjects={codeProjects}
               onFileClick={onFileClick}
               onDuplicateClick={handleDuplicateClick}
+              onProjectClick={handleProjectClick}
+              getProjectTypeColor={getProjectTypeColor}
             />
           ))
         ) : (
@@ -94,6 +133,14 @@ export function TreeView({ tree, codeProjects = [], onFileClick }: TreeViewProps
           error={modalState.error}
         />
       )}
+
+      <ProjectDetailsModal
+        isOpen={projectModalState.isOpen}
+        onClose={handleCloseProjectModal}
+        project={projectModalState.project}
+        getIcon={getProjectTypeIcon}
+        getColor={getProjectTypeColor}
+      />
     </>
   );
 }
@@ -104,9 +151,11 @@ type TreeNodeProps = {
   codeProjects: CodeProject[];
   onFileClick?: (fileId: string) => void;
   onDuplicateClick: (fileId: string) => void;
+  onProjectClick: (project: CodeProject) => void;
+  getProjectTypeColor: (type: ProjectType) => string;
 };
 
-function TreeNode({ node, level, codeProjects, onFileClick, onDuplicateClick }: TreeNodeProps) {
+function TreeNode({ node, level, codeProjects, onFileClick, onDuplicateClick, onProjectClick, getProjectTypeColor }: TreeNodeProps) {
   const [isExpanded, setIsExpanded] = useState(level < 2); // Auto-expand first 2 levels
 
   const formatBytes = (bytes?: number): string => {
@@ -115,21 +164,6 @@ function TreeNode({ node, level, codeProjects, onFileClick, onDuplicateClick }: 
     const sizes = ['B', 'KB', 'MB', 'GB'];
     const i = Math.floor(Math.log(bytes) / Math.log(k));
     return `${(bytes / Math.pow(k, i)).toFixed(1)} ${sizes[i]}`;
-  };
-
-
-  const getProjectTypeColor = (type: ProjectType): string => {
-    switch (type) {
-      case ProjectType.MAVEN: return 'bg-orange-100 text-orange-800';
-      case ProjectType.GRADLE: return 'bg-green-100 text-green-800';
-      case ProjectType.NPM: return 'bg-red-100 text-red-800';
-      case ProjectType.PYTHON: return 'bg-blue-100 text-blue-800';
-      case ProjectType.GO: return 'bg-cyan-100 text-cyan-800';
-      case ProjectType.RUST: return 'bg-amber-100 text-amber-800';
-      case ProjectType.GIT: return 'bg-gray-100 text-gray-800';
-      case ProjectType.GENERIC: return 'bg-purple-100 text-purple-800';
-      default: return 'bg-gray-100 text-gray-800';
-    }
   };
 
   // Check if this folder is a code project
@@ -186,15 +220,19 @@ function TreeNode({ node, level, codeProjects, onFileClick, onDuplicateClick }: 
         <span>{isExpanded ? OPEN_FOLDER_ICON : FOLDER_ICON}</span>
         <span className="flex-1 font-semibold text-gray-900">{node.name}</span>
         {codeProject && (
-          <span
-            className={`flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium ${getProjectTypeColor(
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              onProjectClick(codeProject);
+            }}
+            className={`flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium cursor-pointer hover:opacity-80 transition-opacity ${getProjectTypeColor(
               codeProject.identity.type
             )}`}
-            title={`${codeProject.identity.type} project: ${codeProject.identity.name}`}
+            title={`Click to view ${codeProject.identity.type} project details: ${codeProject.identity.name}`}
           >
             <span>{getProjectTypeIcon(codeProject.identity.type)}</span>
             <span>{codeProject.identity.type}</span>
-          </span>
+          </button>
         )}
         {node.fileCount !== undefined && node.fileCount > 0 && (
           <span className="text-xs text-gray-500">
@@ -215,6 +253,8 @@ function TreeNode({ node, level, codeProjects, onFileClick, onDuplicateClick }: 
               codeProjects={codeProjects}
               onFileClick={onFileClick}
               onDuplicateClick={onDuplicateClick}
+              onProjectClick={onProjectClick}
+              getProjectTypeColor={getProjectTypeColor}
             />
           ))}
         </div>

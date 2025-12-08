@@ -2,11 +2,15 @@
  * Component displaying list of all code projects.
  */
 
+import { useState } from 'react';
 import { useCodeProjects } from '../hooks/useCodeProjects';
 import { ProjectType, type CodeProject } from '../types/codeProject';
+import { ProjectDetailsModal } from './ProjectDetailsModal';
 
 export function CodeProjectList() {
   const { data: projects, isLoading, error } = useCodeProjects();
+  const [selectedProject, setSelectedProject] = useState<CodeProject | null>(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
 
   const getProjectTypeIcon = (type: ProjectType): string => {
     switch (type) {
@@ -72,15 +76,36 @@ export function CodeProjectList() {
     );
   }
 
+  const handleProjectClick = (project: CodeProject) => {
+    setSelectedProject(project);
+    setIsModalOpen(true);
+  };
+
+  const handleCloseModal = () => {
+    setIsModalOpen(false);
+    setSelectedProject(null);
+  };
+
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-      {projects.map((project) => (
-        <ProjectCard key={project.id} project={project} 
-          getIcon={getProjectTypeIcon} 
-          getColor={getProjectTypeColor}
-          formatBytes={formatBytes} />
-      ))}
-    </div>
+    <>
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        {projects.map((project) => (
+          <ProjectCard key={project.id} project={project}
+            getIcon={getProjectTypeIcon}
+            getColor={getProjectTypeColor}
+            formatBytes={formatBytes}
+            onProjectClick={handleProjectClick} />
+        ))}
+      </div>
+
+      <ProjectDetailsModal
+        isOpen={isModalOpen}
+        onClose={handleCloseModal}
+        project={selectedProject}
+        getIcon={getProjectTypeIcon}
+        getColor={getProjectTypeColor}
+      />
+    </>
   );
 }
 
@@ -89,9 +114,10 @@ type ProjectCardProps = {
   getIcon: (type: ProjectType) => string;
   getColor: (type: ProjectType) => string;
   formatBytes: (bytes: number) => string;
+  onProjectClick: (project: CodeProject) => void;
 };
 
-function ProjectCard({ project, getIcon, getColor, formatBytes }: ProjectCardProps) {
+function ProjectCard({ project, getIcon, getColor, formatBytes, onProjectClick }: ProjectCardProps) {
   return (
     <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 hover:shadow-md transition-shadow">
       <div className="flex items-start gap-3 mb-3">
@@ -104,9 +130,13 @@ function ProjectCard({ project, getIcon, getColor, formatBytes }: ProjectCardPro
             <p className="text-sm text-gray-500">v{project.identity.version}</p>
           )}
         </div>
-        <span className={`px-2 py-1 rounded text-xs font-medium ${getColor(project.identity.type)}`}>
+        <button
+          onClick={() => onProjectClick(project)}
+          className={`px-2 py-1 rounded text-xs font-medium cursor-pointer hover:opacity-80 transition-opacity ${getColor(project.identity.type)}`}
+          title="Click to view project details"
+        >
           {project.identity.type}
-        </span>
+        </button>
       </div>
 
       <div className="text-sm text-gray-600 mb-3">

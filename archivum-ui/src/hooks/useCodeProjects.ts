@@ -3,82 +3,52 @@
  */
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import * as api from '../api/code-projects';
-import type { ProjectType } from '../types/code-project';
+import * as api from '../api/codeProjects';
 
-/**
- * Hook to fetch all code projects.
- */
 export function useCodeProjects() {
   return useQuery({
-    queryKey: ['code-projects'],
+    queryKey: ['codeProjects'],
     queryFn: api.getAllProjects
   });
 }
 
-/**
- * Hook to fetch code project by ID.
- */
 export function useCodeProject(id: string) {
   return useQuery({
-    queryKey: ['code-projects', id],
+    queryKey: ['codeProjects', id],
     queryFn: () => api.getProjectById(id),
     enabled: !!id
   });
 }
 
-/**
- * Hook to fetch projects by source.
- */
-export function useCodeProjectsBySource(sourceId: string) {
+export function useProjectsBySource(sourceId: string) {
   return useQuery({
-    queryKey: ['code-projects', 'source', sourceId],
+    queryKey: ['codeProjects', 'source', sourceId],
     queryFn: () => api.getProjectsBySource(sourceId),
     enabled: !!sourceId
   });
 }
 
-/**
- * Hook to fetch projects by type.
- */
-export function useCodeProjectsByType(type: ProjectType) {
+export function useDuplicateProjects() {
   return useQuery({
-    queryKey: ['code-projects', 'type', type],
-    queryFn: () => api.getProjectsByType(type)
+    queryKey: ['codeProjects', 'duplicates'],
+    queryFn: api.getDuplicateProjects
   });
 }
 
-/**
- * Hook to fetch duplicate projects.
- */
-export function useCodeProjectDuplicates() {
+export function useProjectStats() {
   return useQuery({
-    queryKey: ['code-projects', 'duplicates'],
-    queryFn: api.getDuplicates
+    queryKey: ['codeProjects', 'stats'],
+    queryFn: api.getProjectStats
   });
 }
 
-/**
- * Hook to fetch project statistics.
- */
-export function useCodeProjectStats() {
-  return useQuery({
-    queryKey: ['code-projects', 'stats'],
-    queryFn: api.getStatistics
-  });
-}
-
-/**
- * Hook to delete a code project.
- */
-export function useDeleteCodeProject() {
+export function useDeleteProject() {
   const queryClient = useQueryClient();
 
   return useMutation({
     mutationFn: api.deleteProject,
     onSuccess: () => {
-      // Invalidate all code project queries
-      queryClient.invalidateQueries({ queryKey: ['code-projects'] });
+      queryClient.invalidateQueries({ queryKey: ['codeProjects'] });
     }
   });
 }

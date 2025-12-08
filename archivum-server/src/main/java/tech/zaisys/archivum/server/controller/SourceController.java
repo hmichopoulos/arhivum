@@ -7,8 +7,10 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import tech.zaisys.archivum.api.dto.CompleteScanRequest;
 import tech.zaisys.archivum.api.dto.CreateSourceRequest;
+import tech.zaisys.archivum.api.dto.FolderNodeDto;
 import tech.zaisys.archivum.api.dto.SourceDto;
 import tech.zaisys.archivum.api.dto.SourceResponse;
+import tech.zaisys.archivum.server.service.FolderTreeService;
 import tech.zaisys.archivum.server.service.SourceService;
 
 import java.util.List;
@@ -25,6 +27,7 @@ import java.util.UUID;
 public class SourceController {
 
     private final SourceService sourceService;
+    private final FolderTreeService folderTreeService;
 
     /**
      * Create a new source.
@@ -63,6 +66,19 @@ public class SourceController {
         return sourceService.findById(id)
             .map(ResponseEntity::ok)
             .orElse(ResponseEntity.notFound().build());
+    }
+
+    /**
+     * Get folder tree for a source.
+     *
+     * @param id Source ID
+     * @return Folder tree structure
+     */
+    @GetMapping("/{id}/tree")
+    public ResponseEntity<FolderNodeDto> getSourceTree(@PathVariable UUID id) {
+        log.debug("GET /api/sources/{}/tree - Building folder tree", id);
+        FolderNodeDto tree = folderTreeService.buildTree(id);
+        return ResponseEntity.ok(tree);
     }
 
     /**

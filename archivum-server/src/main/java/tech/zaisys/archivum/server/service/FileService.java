@@ -2,6 +2,10 @@ package tech.zaisys.archivum.server.service;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import tech.zaisys.archivum.api.dto.FileBatchDto;
@@ -114,5 +118,50 @@ public class FileService {
     @Transactional(readOnly = true)
     public Optional<FileDto> findById(UUID id) {
         return fileRepository.findById(id).map(fileMapper::toDto);
+    }
+
+    /**
+     * Query files with optional filters and pagination.
+     *
+     * @param sourceId Source ID (required)
+     * @param extension File extension filter (optional)
+     * @param isDuplicate Duplicate filter (optional)
+     * @param page Page number (0-indexed)
+     * @param size Page size
+     * @return List of file DTOs
+     */
+    @Transactional(readOnly = true)
+    public List<FileDto> queryFiles(UUID sourceId, String extension, Boolean isDuplicate,
+                                     int page, int size) {
+        // Create pageable with sorting by path
+        Pageable pageable = PageRequest.of(page, size, Sort.by("path").ascending());
+
+        // Query with filters
+        Page<ScannedFile> resultPage = fileRepository.queryFiles(
+            sourceId, extension, isDuplicate, pageable);
+
+        // Map to DTOs
+        return resultPage.map(fileMapper::toDto).getContent();
+    }
+
+    /**
+     * Find all duplicate files (files with the same SHA-256 hash).
+     *
+     * @param fileId File ID to find duplicates for
+     * @return List of all files with the same hash (including the original)
+     */
+    @Transactional(readOnly = true)
+    public List<FileDto> findDuplicates(UUID fileId) {
+        // Get the original file
+        ScannedFile file = fileRepository.findById(fileId)
+            .orElseThrow(() -> new IllegalArgumentException("File not found: " + fileId));
+
+        // Find all files with the same hash
+        List<ScannedFile> duplicates = fileRepository.findBySha256(file.getSha256());
+
+        // Map to DTOs
+        return duplicates.stream()
+            .map(fileMapper::toDto)
+            .toList();
     }
 }

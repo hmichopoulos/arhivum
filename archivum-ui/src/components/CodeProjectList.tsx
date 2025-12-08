@@ -1,132 +1,130 @@
 /**
- * List view for code projects with filtering and sorting.
+ * Component displaying list of all code projects.
  */
 
-import { useState, useMemo } from 'react';
 import { useCodeProjects } from '../hooks/useCodeProjects';
-import { CodeProjectCard } from './CodeProjectCard';
-import type { CodeProject } from '../types/code-project';
-import { ProjectType } from '../types/code-project';
+import { ProjectType, type CodeProject } from '../types/codeProject';
 
 export function CodeProjectList() {
   const { data: projects, isLoading, error } = useCodeProjects();
-  const [searchQuery, setSearchQuery] = useState('');
-  const [typeFilter, setTypeFilter] = useState<ProjectType | 'ALL'>('ALL');
-  const [sortBy, setSortBy] = useState<'name' | 'size' | 'date'>('date');
 
-  const filteredProjects = useMemo(() => {
-    if (!projects) return [];
-
-    let filtered = projects;
-
-    // Apply search filter
-    if (searchQuery) {
-      const query = searchQuery.toLowerCase();
-      filtered = filtered.filter(p =>
-        p.identity.name.toLowerCase().includes(query) ||
-        p.identity.identifier.toLowerCase().includes(query) ||
-        p.rootPath.toLowerCase().includes(query)
-      );
+  const getProjectTypeIcon = (type: ProjectType): string => {
+    switch (type) {
+      case ProjectType.MAVEN: return '☕';
+      case ProjectType.GRADLE: return '🐘';
+      case ProjectType.NPM: return '📦';
+      case ProjectType.PYTHON: return '🐍';
+      case ProjectType.GO: return '🐹';
+      case ProjectType.RUST: return '🦀';
+      case ProjectType.GIT: return '🔧';
+      case ProjectType.GENERIC: return '📁';
+      default: return '💻';
     }
+  };
 
-    // Apply type filter
-    if (typeFilter !== 'ALL') {
-      filtered = filtered.filter(p => p.identity.type === typeFilter);
+  const getProjectTypeColor = (type: ProjectType): string => {
+    switch (type) {
+      case ProjectType.MAVEN: return 'bg-orange-100 text-orange-800';
+      case ProjectType.GRADLE: return 'bg-green-100 text-green-800';
+      case ProjectType.NPM: return 'bg-red-100 text-red-800';
+      case ProjectType.PYTHON: return 'bg-blue-100 text-blue-800';
+      case ProjectType.GO: return 'bg-cyan-100 text-cyan-800';
+      case ProjectType.RUST: return 'bg-amber-100 text-amber-800';
+      case ProjectType.GIT: return 'bg-gray-100 text-gray-800';
+      case ProjectType.GENERIC: return 'bg-purple-100 text-purple-800';
+      default: return 'bg-gray-100 text-gray-800';
     }
+  };
 
-    // Sort
-    filtered = [...filtered].sort((a, b) => {
-      switch (sortBy) {
-        case 'name':
-          return a.identity.name.localeCompare(b.identity.name);
-        case 'size':
-          return b.totalSizeBytes - a.totalSizeBytes;
-        case 'date':
-        default:
-          return new Date(b.scannedAt).getTime() - new Date(a.scannedAt).getTime();
-      }
-    });
-
-    return filtered;
-  }, [projects, searchQuery, typeFilter, sortBy]);
+  const formatBytes = (bytes: number): string => {
+    const k = 1024;
+    const sizes = ['B', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return `${(bytes / Math.pow(k, i)).toFixed(1)} ${sizes[i]}`;
+  };
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center h-64">
-        <div className="text-gray-500">Loading code projects...</div>
+      <div className="text-center py-12">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+        <p className="text-gray-600">Loading projects...</p>
       </div>
     );
   }
 
   if (error) {
     return (
-      <div className="flex items-center justify-center h-64">
-        <div className="text-red-500">Error loading projects: {(error as Error).message}</div>
+      <div className="text-center py-12 text-red-600">
+        <p className="text-xl font-semibold">Error loading projects</p>
+        <p className="text-sm mt-2">{(error as Error).message}</p>
+      </div>
+    );
+  }
+
+  if (!projects || projects.length === 0) {
+    return (
+      <div className="text-center py-12">
+        <p className="text-gray-500 text-lg">No code projects found</p>
+        <p className="text-gray-400 text-sm mt-2">
+          Scan directories containing code to detect projects
+        </p>
       </div>
     );
   }
 
   return (
-    <div className="space-y-4">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold">Code Projects</h1>
-        <div className="text-sm text-gray-600">
-          {filteredProjects.length} of {projects?.length || 0} projects
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+      {projects.map((project) => (
+        <ProjectCard key={project.id} project={project} 
+          getIcon={getProjectTypeIcon} 
+          getColor={getProjectTypeColor}
+          formatBytes={formatBytes} />
+      ))}
+    </div>
+  );
+}
+
+type ProjectCardProps = {
+  project: CodeProject;
+  getIcon: (type: ProjectType) => string;
+  getColor: (type: ProjectType) => string;
+  formatBytes: (bytes: number) => string;
+};
+
+function ProjectCard({ project, getIcon, getColor, formatBytes }: ProjectCardProps) {
+  return (
+    <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 hover:shadow-md transition-shadow">
+      <div className="flex items-start gap-3 mb-3">
+        <span className="text-2xl">{getIcon(project.identity.type)}</span>
+        <div className="flex-1 min-w-0">
+          <h3 className="font-semibold text-gray-900 truncate">
+            {project.identity.name}
+          </h3>
+          {project.identity.version && (
+            <p className="text-sm text-gray-500">v{project.identity.version}</p>
+          )}
         </div>
+        <span className={`px-2 py-1 rounded text-xs font-medium ${getColor(project.identity.type)}`}>
+          {project.identity.type}
+        </span>
       </div>
 
-      {/* Filters */}
-      <div className="flex gap-4 items-center">
-        {/* Search */}
-        <input
-          type="text"
-          placeholder="Search projects..."
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-          className="flex-1 px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-        />
-
-        {/* Type Filter */}
-        <select
-          value={typeFilter}
-          onChange={(e) => setTypeFilter(e.target.value as ProjectType | 'ALL')}
-          className="px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-        >
-          <option value="ALL">All Types</option>
-          {Object.values(ProjectType).map(type => (
-            <option key={type} value={type}>{type}</option>
-          ))}
-        </select>
-
-        {/* Sort */}
-        <select
-          value={sortBy}
-          onChange={(e) => setSortBy(e.target.value as 'name' | 'size' | 'date')}
-          className="px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-        >
-          <option value="date">Sort by Date</option>
-          <option value="name">Sort by Name</option>
-          <option value="size">Sort by Size</option>
-        </select>
+      <div className="text-sm text-gray-600 mb-3">
+        <p className="truncate" title={project.rootPath}>
+          📂 {project.rootPath}
+        </p>
       </div>
 
-      {/* Projects Grid */}
-      {filteredProjects.length === 0 ? (
-        <div className="text-center py-12 text-gray-500">
-          {searchQuery || typeFilter !== 'ALL' ? 'No projects match your filters' : 'No code projects found'}
+      <div className="grid grid-cols-2 gap-2 text-sm">
+        <div>
+          <p className="text-gray-500">Source Files</p>
+          <p className="font-medium text-gray-900">{project.sourceFileCount}</p>
         </div>
-      ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {filteredProjects.map(project => (
-            <CodeProjectCard
-              key={project.id}
-              project={project}
-              onClick={() => {/* Navigate to detail view */}}
-            />
-          ))}
+        <div>
+          <p className="text-gray-500">Total Size</p>
+          <p className="font-medium text-gray-900">{formatBytes(project.totalSizeBytes)}</p>
         </div>
-      )}
+      </div>
     </div>
   );
 }

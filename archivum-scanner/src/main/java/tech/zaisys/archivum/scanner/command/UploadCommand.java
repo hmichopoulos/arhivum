@@ -70,6 +70,7 @@ public class UploadCommand implements Callable<Integer> {
     private int uploadedBatches = 0;
     private int totalBatches = 0;
     private long uploadedFiles = 0;
+    private int uploadedProjects = 0;
     private long startTime;
 
     @Override
@@ -106,6 +107,9 @@ public class UploadCommand implements Callable<Integer> {
             for (Path batchFile : batchFiles) {
                 uploadBatch(sourceId, batchFile);
             }
+
+            // Upload code projects if they exist
+            uploadCodeProjects(sourceId);
 
             // Complete scan
             completeScan(sourceId, source);
@@ -235,6 +239,65 @@ public class UploadCommand implements Callable<Integer> {
             batch.getBatchNumber(), batch.getFiles().size());
     }
 
+    private void uploadCodeProjects(UUID sourceId) throws IOException, InterruptedException {
+        Path projectsFile = outputDir.resolve("code-projects.json");
+
+        if (!Files.exists(projectsFile)) {
+            log.debug("No code-projects.json found - skipping project upload");
+            return;
+        }
+
+        log.info("Uploading code projects...");
+
+        // Read projects from file
+        CodeProjectDto[] projectsArray = objectMapper.readValue(
+            projectsFile.toFile(),
+            CodeProjectDto[].class
+        );
+        List<CodeProjectDto> projects = List.of(projectsArray);
+
+        if (projects.isEmpty()) {
+            log.info("No code projects to upload");
+            return;
+        }
+
+        // Update source IDs (original might be different)
+        List<CodeProjectDto> updatedProjects = new ArrayList<>();
+        for (CodeProjectDto p : projects) {
+            updatedProjects.add(CodeProjectDto.builder()
+                .sourceId(sourceId)
+                .rootPath(p.getRootPath())
+                .identity(p.getIdentity())
+                .scannedAt(p.getScannedAt())
+                .sourceFileCount(p.getSourceFileCount())
+                .totalFileCount(p.getTotalFileCount())
+                .totalSizeBytes(p.getTotalSizeBytes())
+                .contentHash(p.getContentHash())
+                .build());
+        }
+
+        String endpoint = serverUrl + "/api/code-projects/bulk";
+        String requestBody = objectMapper.writeValueAsString(updatedProjects);
+
+        HttpRequest request = HttpRequest.newBuilder()
+            .uri(URI.create(endpoint))
+            .timeout(Duration.ofSeconds(timeoutSeconds))
+            .header("Content-Type", "application/json")
+            .POST(HttpRequest.BodyPublishers.ofString(requestBody))
+            .build();
+
+        HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
+
+        if (response.statusCode() != 201) {
+            throw new IOException("Failed to upload code projects. Status: " +
+                response.statusCode() + ", Response: " + response.body());
+        }
+
+        uploadedProjects = projects.size();
+        System.out.printf("Uploaded %d code project(s)%n", uploadedProjects);
+        log.info("Code projects uploaded successfully: {} projects", uploadedProjects);
+    }
+
     private void completeScan(UUID sourceId, SourceDto source) throws IOException, InterruptedException {
         String endpoint = serverUrl + "/api/sources/" + sourceId + "/complete";
 
@@ -269,9 +332,10 @@ public class UploadCommand implements Callable<Integer> {
         System.out.println();
         System.out.println("Upload Complete!");
         System.out.println("================");
-        System.out.println("Batches uploaded: " + uploadedBatches);
-        System.out.println("Files uploaded:   " + uploadedFiles);
-        System.out.println("Duration:         " + formatDuration(duration));
+        System.out.println("Batches uploaded:  " + uploadedBatches);
+        System.out.println("Files uploaded:    " + uploadedFiles);
+        System.out.println("Projects uploaded: " + uploadedProjects);
+        System.out.println("Duration:          " + formatDuration(duration));
     }
 
     private String formatDuration(long millis) {

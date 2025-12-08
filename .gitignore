@@ -63,3 +63,6 @@ dist/
 # Database
 *.db
 *.sqlite
+
+# Scanner output folders
+output*/

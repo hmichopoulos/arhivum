@@ -5,6 +5,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import tech.zaisys.archivum.api.dto.CompleteScanRequest;
 import tech.zaisys.archivum.api.dto.CreateSourceRequest;
 import tech.zaisys.archivum.api.dto.SourceDto;
 import tech.zaisys.archivum.api.dto.SourceResponse;
@@ -135,6 +136,31 @@ public class SourceController {
                 true,
                 "Source deleted successfully"
             ));
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.notFound().build();
+        }
+    }
+
+    /**
+     * Complete a scan for a source.
+     * Updates final statistics and marks as completed.
+     *
+     * POST /api/sources/{id}/complete
+     *
+     * @param id Source ID
+     * @param request Completion request with final stats
+     * @return Updated source DTO
+     */
+    @PostMapping("/{id}/complete")
+    public ResponseEntity<SourceDto> completeScan(
+            @PathVariable UUID id,
+            @RequestBody CompleteScanRequest request) {
+        log.info("POST /api/sources/{}/complete - {} files, {} bytes, success={}",
+            id, request.getTotalFiles(), request.getTotalSize(), request.getSuccess());
+
+        try {
+            SourceDto updated = sourceService.completeScan(id, request);
+            return ResponseEntity.ok(updated);
         } catch (IllegalArgumentException e) {
             return ResponseEntity.notFound().build();
         }

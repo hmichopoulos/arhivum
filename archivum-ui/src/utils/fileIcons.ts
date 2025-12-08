@@ -3,7 +3,7 @@
  * Centralizes icon mapping logic for maintainability.
  */
 
-import { ProjectType } from '../types';
+import { ProjectType } from '../types/codeProject';
 
 /**
  * File extension to icon mapping configuration.

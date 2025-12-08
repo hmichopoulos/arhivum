@@ -6,6 +6,7 @@ import { useState } from 'react';
 import { CodeProjectList } from '../components/CodeProjectList';
 import { DuplicatesView } from '../components/DuplicatesView';
 import { CodeProjectStats } from '../components/CodeProjectStats';
+import { ErrorBoundary } from '../components/ErrorBoundary';
 
 type Tab = 'projects' | 'duplicates' | 'stats';
 
@@ -43,11 +44,13 @@ export function CodeProjectsPage() {
         </div>
 
         {/* Tab Content */}
-        <div>
-          {activeTab === 'projects' && <CodeProjectList />}
-          {activeTab === 'duplicates' && <DuplicatesView />}
-          {activeTab === 'stats' && <CodeProjectStats />}
-        </div>
+        <ErrorBoundary>
+          <div>
+            {activeTab === 'projects' && <CodeProjectList />}
+            {activeTab === 'duplicates' && <DuplicatesView />}
+            {activeTab === 'stats' && <CodeProjectStats />}
+          </div>
+        </ErrorBoundary>
       </div>
     </div>
   );

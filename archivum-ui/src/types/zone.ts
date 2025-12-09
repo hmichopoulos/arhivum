@@ -8,6 +8,7 @@ export enum Zone {
   SOFTWARE = 'SOFTWARE',
   BACKUP = 'BACKUP',
   CODE = 'CODE',
+  SOFTWARE_LIB = 'SOFTWARE_LIB',
   UNKNOWN = 'UNKNOWN'
 }
 
@@ -18,6 +19,7 @@ export const ZONE_LABELS: Record<Zone, string> = {
   [Zone.SOFTWARE]: 'Software',
   [Zone.BACKUP]: 'Backup',
   [Zone.CODE]: 'Code',
+  [Zone.SOFTWARE_LIB]: 'Software Lib',
   [Zone.UNKNOWN]: 'Unknown'
 };
 
@@ -28,5 +30,6 @@ export const ZONE_COLORS: Record<Zone, string> = {
   [Zone.SOFTWARE]: 'bg-orange-100 text-orange-800',
   [Zone.BACKUP]: 'bg-gray-100 text-gray-800',
   [Zone.CODE]: 'bg-cyan-100 text-cyan-800',
+  [Zone.SOFTWARE_LIB]: 'bg-amber-100 text-amber-800',
   [Zone.UNKNOWN]: 'bg-red-100 text-red-800'
 };

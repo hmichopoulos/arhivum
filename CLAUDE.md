@@ -235,6 +235,7 @@ Files are categorized into zones that determine deduplication behavior:
 | SOFTWARE | No | Yes | Installers, apps (preserve DLLs) |
 | BACKUP | No | Yes | Full backup sets |
 | CODE | No | Yes | Source code repos |
+| SOFTWARE_LIB | Yes | Yes | Libraries (.m2, .venv, node_modules) - can be redownloaded |
 | UNKNOWN | No | No | Needs manual classification |
 
 **Manual Zone Classification:**

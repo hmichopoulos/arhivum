@@ -96,6 +96,13 @@ archivum/
 
 ## Recent Updates (December 2025)
 
+### Code Projects Search (Issue #30)
+- ✅ Added search functionality to Code Projects screen
+- ✅ Search across multiple fields: name, type, path, version, groupId, identifier
+- ✅ Real-time filtering as user types
+- ✅ Case-insensitive search for better UX
+- ✅ Result count feedback and empty state handling
+
 ### Zone Classification System (Issues #24, #25)
 - ✅ Manual folder zone classification via UI
 - ✅ Hierarchical zone inheritance from parent folders

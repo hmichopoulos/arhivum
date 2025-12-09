@@ -203,7 +203,8 @@ public class FolderTreeService {
             tech.zaisys.archivum.api.enums.Zone fileZone = fileNode.zone;
             boolean isInherited = false;
 
-            if (fileZone == null && parentZoneResult != null) {
+            // Files with null or UNKNOWN zone should inherit from parent folder
+            if ((fileZone == null || fileZone == tech.zaisys.archivum.api.enums.Zone.UNKNOWN) && parentZoneResult != null) {
                 // File has no explicit zone, inherit from parent folder
                 fileZone = parentZoneResult.zone();
                 isInherited = true;

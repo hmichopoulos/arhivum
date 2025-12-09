@@ -42,6 +42,13 @@ public enum Zone {
     CODE,
 
     /**
+     * Software libraries (Maven .m2, Python .venv, node_modules, etc.)
+     * File dedup: YES, Folder dedup: YES
+     * Note: Usually can be ignored/redownloaded from internet
+     */
+    SOFTWARE_LIB,
+
+    /**
      * Unclassified content needing manual review
      * File dedup: NO, Folder dedup: NO
      */

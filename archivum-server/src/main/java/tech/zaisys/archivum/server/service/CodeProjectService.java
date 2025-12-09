@@ -12,6 +12,7 @@ import tech.zaisys.archivum.server.domain.CodeProject;
 import tech.zaisys.archivum.server.repository.CodeProjectRepository;
 import tech.zaisys.archivum.server.repository.ScannedFileRepository;
 
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Paths;
 import java.time.Instant;
 import java.util.List;
@@ -214,7 +215,6 @@ public class CodeProjectService {
 
         // Get folder statistics from scanned files
         long fileCount = scannedFileRepository.countBySourceIdAndPathStartingWith(sourceId, folderPath);
-        long totalSize = scannedFileRepository.sumSizeBySourceIdAndPathStartingWith(sourceId, folderPath);
 
         // Only create if there are files in the folder
         if (fileCount == 0) {
@@ -222,11 +222,27 @@ public class CodeProjectService {
             return Optional.empty();
         }
 
+        long totalSize = scannedFileRepository.sumSizeBySourceIdAndPathStartingWith(sourceId, folderPath);
+
         // Extract folder name from path
-        String folderName = Paths.get(folderPath).getFileName().toString();
+        // Note: getFileName() returns null for root paths like "/"
+        java.nio.file.Path pathObj = Paths.get(folderPath);
+        java.nio.file.Path fileNamePath = pathObj.getFileName();
+        String folderName = (fileNamePath != null) ? fileNamePath.toString() : "root";
         if (folderName.isEmpty()) {
             folderName = "root";
         }
+
+        // Handle potential integer overflow for file counts
+        if (fileCount > Integer.MAX_VALUE) {
+            log.warn("File count {} exceeds Integer.MAX_VALUE for folder {}, capping at Integer.MAX_VALUE",
+                fileCount, folderPath);
+        }
+        int safeFileCount = (int) Math.min(fileCount, Integer.MAX_VALUE);
+
+        // Generate stable content hash using UUID from folder path
+        String contentHashInput = "manual-" + sourceId + "-" + folderPath;
+        String contentHash = UUID.nameUUIDFromBytes(contentHashInput.getBytes(StandardCharsets.UTF_8)).toString();
 
         // Create new GENERIC code project
         CodeProject project = CodeProject.builder()
@@ -237,9 +253,9 @@ public class CodeProjectService {
             .name(folderName)
             .version("manual")
             .identifier(folderPath)
-            .contentHash("manual-" + folderPath.hashCode())
-            .sourceFileCount((int) fileCount)
-            .totalFileCount((int) fileCount)
+            .contentHash(contentHash)
+            .sourceFileCount(safeFileCount)
+            .totalFileCount(safeFileCount)
             .totalSizeBytes(totalSize)
             .scannedAt(Instant.now())
             .build();

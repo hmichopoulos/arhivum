@@ -3,6 +3,7 @@
  */
 
 import { useState } from 'react';
+import { Link } from 'react-router-dom';
 import { useCodeProjects } from '../hooks/useCodeProjects';
 import { ProjectType, type CodeProject } from '../types/codeProject';
 import { ProjectDetailsModal } from './ProjectDetailsModal';
@@ -143,6 +144,13 @@ function ProjectCard({ project, getIcon, getColor, formatBytes, onProjectClick }
         <p className="truncate" title={project.rootPath}>
           📂 {project.rootPath}
         </p>
+        <Link
+          to={`/sources/${project.sourceId}`}
+          className="text-xs text-blue-600 hover:text-blue-800 hover:underline inline-flex items-center gap-1 mt-1"
+          onClick={(e) => e.stopPropagation()}
+        >
+          View Source →
+        </Link>
       </div>
 
       <div className="grid grid-cols-2 gap-2 text-sm">

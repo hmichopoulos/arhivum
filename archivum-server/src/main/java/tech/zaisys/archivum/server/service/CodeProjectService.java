@@ -10,7 +10,11 @@ import tech.zaisys.archivum.api.enums.ProjectType;
 import tech.zaisys.archivum.api.enums.Zone;
 import tech.zaisys.archivum.server.domain.CodeProject;
 import tech.zaisys.archivum.server.repository.CodeProjectRepository;
+import tech.zaisys.archivum.server.repository.ScannedFileRepository;
 
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Paths;
+import java.time.Instant;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -27,6 +31,7 @@ public class CodeProjectService {
 
     private final CodeProjectRepository repository;
     private final FolderZoneService folderZoneService;
+    private final ScannedFileRepository scannedFileRepository;
 
     /**
      * Save a code project from DTO.
@@ -188,6 +193,78 @@ public class CodeProjectService {
     public void deleteById(UUID id) {
         repository.deleteById(id);
         log.info("Deleted code project: {}", id);
+    }
+
+    /**
+     * Create or get a manual code project for a folder marked as CODE zone.
+     * If a code project already exists for this folder, returns it.
+     * Otherwise, creates a new GENERIC type project with statistics from ScannedFile.
+     *
+     * @param sourceId Source ID
+     * @param folderPath Folder path
+     * @return Code project DTO
+     */
+    @Transactional
+    public Optional<CodeProjectDto> createOrGetManualCodeProject(UUID sourceId, String folderPath) {
+        // Check if project already exists
+        Optional<CodeProject> existing = repository.findBySourceIdAndRootPath(sourceId, folderPath);
+        if (existing.isPresent()) {
+            log.debug("Code project already exists for folder: {}", folderPath);
+            return Optional.of(toDto(existing.get()));
+        }
+
+        // Get folder statistics from scanned files
+        long fileCount = scannedFileRepository.countBySourceIdAndPathStartingWith(sourceId, folderPath);
+
+        // Only create if there are files in the folder
+        if (fileCount == 0) {
+            log.debug("No files found in folder {}, skipping code project creation", folderPath);
+            return Optional.empty();
+        }
+
+        long totalSize = scannedFileRepository.sumSizeBySourceIdAndPathStartingWith(sourceId, folderPath);
+
+        // Extract folder name from path
+        // Note: getFileName() returns null for root paths like "/"
+        java.nio.file.Path pathObj = Paths.get(folderPath);
+        java.nio.file.Path fileNamePath = pathObj.getFileName();
+        String folderName = (fileNamePath != null) ? fileNamePath.toString() : "root";
+        if (folderName.isEmpty()) {
+            folderName = "root";
+        }
+
+        // Handle potential integer overflow for file counts
+        if (fileCount > Integer.MAX_VALUE) {
+            log.warn("File count {} exceeds Integer.MAX_VALUE for folder {}, capping at Integer.MAX_VALUE",
+                fileCount, folderPath);
+        }
+        int safeFileCount = (int) Math.min(fileCount, Integer.MAX_VALUE);
+
+        // Generate stable content hash using UUID from folder path
+        String contentHashInput = "manual-" + sourceId + "-" + folderPath;
+        String contentHash = UUID.nameUUIDFromBytes(contentHashInput.getBytes(StandardCharsets.UTF_8)).toString();
+
+        // Create new GENERIC code project
+        CodeProject project = CodeProject.builder()
+            .id(UUID.randomUUID())
+            .sourceId(sourceId)
+            .rootPath(folderPath)
+            .projectType(ProjectType.GENERIC)
+            .name(folderName)
+            .version("manual")
+            .identifier(folderPath)
+            .contentHash(contentHash)
+            .sourceFileCount(safeFileCount)
+            .totalFileCount(safeFileCount)
+            .totalSizeBytes(totalSize)
+            .scannedAt(Instant.now())
+            .build();
+
+        CodeProject saved = repository.save(project);
+        log.info("Created manual code project for folder: {} ({} files, {} bytes)",
+            folderPath, fileCount, totalSize);
+
+        return Optional.of(toDto(saved));
     }
 
     /**

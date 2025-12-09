@@ -11,6 +11,7 @@ import tech.zaisys.archivum.api.dto.FolderNodeDto;
 import tech.zaisys.archivum.api.dto.SourceDto;
 import tech.zaisys.archivum.api.dto.SourceResponse;
 import tech.zaisys.archivum.api.enums.Zone;
+import tech.zaisys.archivum.server.service.CodeProjectService;
 import tech.zaisys.archivum.server.service.FolderTreeService;
 import tech.zaisys.archivum.server.service.FolderZoneService;
 import tech.zaisys.archivum.server.service.SourceService;
@@ -32,6 +33,7 @@ public class SourceController {
     private final SourceService sourceService;
     private final FolderTreeService folderTreeService;
     private final FolderZoneService folderZoneService;
+    private final CodeProjectService codeProjectService;
 
     /**
      * Create a new source.
@@ -116,6 +118,12 @@ public class SourceController {
         try {
             Zone zone = Zone.valueOf(zoneStr);
             folderZoneService.setFolderZone(id, folderPath, zone);
+
+            // If zone is CODE, create code project if it doesn't exist
+            if (zone == Zone.CODE) {
+                codeProjectService.createOrGetManualCodeProject(id, folderPath);
+            }
+
             // Invalidate tree cache since zones changed
             folderTreeService.invalidateTree(id);
             return ResponseEntity.ok(Map.of("success", true));

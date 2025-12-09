@@ -176,4 +176,24 @@ public interface ScannedFileRepository extends JpaRepository<ScannedFile, UUID> 
     @Modifying
     @Transactional
     void deleteBySourceId(UUID sourceId);
+
+    /**
+     * Count files in a folder (path starts with folderPath).
+     *
+     * @param sourceId Source ID
+     * @param folderPath Folder path
+     * @return Count of files in the folder
+     */
+    @Query("SELECT COUNT(f) FROM ScannedFile f WHERE f.source.id = :sourceId AND f.path LIKE CONCAT(:folderPath, '%')")
+    long countBySourceIdAndPathStartingWith(@Param("sourceId") UUID sourceId, @Param("folderPath") String folderPath);
+
+    /**
+     * Sum file sizes in a folder (path starts with folderPath).
+     *
+     * @param sourceId Source ID
+     * @param folderPath Folder path
+     * @return Total size of files in the folder
+     */
+    @Query("SELECT COALESCE(SUM(f.size), 0) FROM ScannedFile f WHERE f.source.id = :sourceId AND f.path LIKE CONCAT(:folderPath, '%')")
+    long sumSizeBySourceIdAndPathStartingWith(@Param("sourceId") UUID sourceId, @Param("folderPath") String folderPath);
 }

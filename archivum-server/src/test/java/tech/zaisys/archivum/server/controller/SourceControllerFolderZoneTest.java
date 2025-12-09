@@ -10,6 +10,7 @@ import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 import tech.zaisys.archivum.api.enums.Zone;
+import tech.zaisys.archivum.server.service.CodeProjectService;
 import tech.zaisys.archivum.server.service.FolderTreeService;
 import tech.zaisys.archivum.server.service.FolderZoneService;
 import tech.zaisys.archivum.server.service.SourceService;
@@ -43,6 +44,9 @@ class SourceControllerFolderZoneTest {
 
     @MockBean
     private FolderTreeService folderTreeService;
+
+    @MockBean
+    private CodeProjectService codeProjectService;
 
     private UUID sourceId;
 
@@ -205,6 +209,48 @@ class SourceControllerFolderZoneTest {
             .andExpect(jsonPath("$.success").value(true));
 
         verify(folderZoneService).setFolderZone(sourceId, specialPath, Zone.DOCUMENTS);
+        verify(folderTreeService).invalidateTree(sourceId);
+    }
+
+    @Test
+    @DisplayName("should create code project when zone is CODE")
+    void shouldCreateCodeProjectWhenZoneIsCode() throws Exception {
+        // Given
+        String folderPath = "/path/to/code";
+        Map<String, String> request = new HashMap<>();
+        request.put("folderPath", folderPath);
+        request.put("zone", "CODE");
+
+        // When/Then
+        mockMvc.perform(patch("/api/sources/{id}/folders/zone", sourceId)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(request)))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.success").value(true));
+
+        verify(folderZoneService).setFolderZone(sourceId, folderPath, Zone.CODE);
+        verify(codeProjectService).createOrGetManualCodeProject(sourceId, folderPath);
+        verify(folderTreeService).invalidateTree(sourceId);
+    }
+
+    @Test
+    @DisplayName("should not create code project when zone is not CODE")
+    void shouldNotCreateCodeProjectWhenZoneIsNotCode() throws Exception {
+        // Given
+        String folderPath = "/path/to/media";
+        Map<String, String> request = new HashMap<>();
+        request.put("folderPath", folderPath);
+        request.put("zone", "MEDIA");
+
+        // When/Then
+        mockMvc.perform(patch("/api/sources/{id}/folders/zone", sourceId)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(request)))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.success").value(true));
+
+        verify(folderZoneService).setFolderZone(sourceId, folderPath, Zone.MEDIA);
+        verify(codeProjectService, never()).createOrGetManualCodeProject(any(), any());
         verify(folderTreeService).invalidateTree(sourceId);
     }
 }

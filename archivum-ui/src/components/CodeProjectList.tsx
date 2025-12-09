@@ -12,6 +12,7 @@ export function CodeProjectList() {
   const { data: projects, isLoading, error } = useCodeProjects();
   const [selectedProject, setSelectedProject] = useState<CodeProject | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [searchTerm, setSearchTerm] = useState('');
 
   const getProjectTypeIcon = (type: ProjectType): string => {
     switch (type) {
@@ -87,17 +88,58 @@ export function CodeProjectList() {
     setSelectedProject(null);
   };
 
+  const filteredProjects = projects?.filter(project => {
+    if (!searchTerm) return true;
+
+    const searchLower = searchTerm.toLowerCase();
+    const identity = project.identity;
+
+    return (
+      identity.name.toLowerCase().includes(searchLower) ||
+      identity.type.toLowerCase().includes(searchLower) ||
+      project.rootPath.toLowerCase().includes(searchLower) ||
+      identity.version?.toLowerCase().includes(searchLower) ||
+      identity.groupId?.toLowerCase().includes(searchLower) ||
+      identity.identifier.toLowerCase().includes(searchLower)
+    );
+  }) || [];
+
   return (
     <>
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {projects.map((project) => (
-          <ProjectCard key={project.id} project={project}
-            getIcon={getProjectTypeIcon}
-            getColor={getProjectTypeColor}
-            formatBytes={formatBytes}
-            onProjectClick={handleProjectClick} />
-        ))}
+      {/* Search input */}
+      <div className="mb-6">
+        <input
+          type="text"
+          placeholder="Search projects by name, type, path, version..."
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+        />
+        {searchTerm && (
+          <p className="text-sm text-gray-600 mt-2">
+            Found {filteredProjects.length} project{filteredProjects.length !== 1 ? 's' : ''}
+          </p>
+        )}
       </div>
+
+      {filteredProjects.length === 0 ? (
+        <div className="text-center py-12">
+          <p className="text-gray-500 text-lg">No projects match your search</p>
+          <p className="text-gray-400 text-sm mt-2">
+            Try a different search term
+          </p>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {filteredProjects.map((project) => (
+            <ProjectCard key={project.id} project={project}
+              getIcon={getProjectTypeIcon}
+              getColor={getProjectTypeColor}
+              formatBytes={formatBytes}
+              onProjectClick={handleProjectClick} />
+          ))}
+        </div>
+      )}
 
       <ProjectDetailsModal
         isOpen={isModalOpen}

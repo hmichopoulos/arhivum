@@ -96,6 +96,13 @@ archivum/
 
 ## Recent Updates (December 2025)
 
+### Zone Classification System (Issues #24, #25)
+- ✅ Manual folder zone classification via UI
+- ✅ Hierarchical zone inheritance from parent folders
+- ✅ Automatic CODE zone filtering in Code Projects tab
+- ✅ Auto-creation of GENERIC code projects for folders manually marked as CODE
+- ✅ Zone changes reflected immediately in UI
+
 ### File Upload System (Milestone 3)
 - ✅ Implemented `upload` command for resilient two-step scanning workflow
 - ✅ Scanner can now upload previously generated scan results
@@ -229,6 +236,13 @@ Files are categorized into zones that determine deduplication behavior:
 | BACKUP | No | Yes | Full backup sets |
 | CODE | No | Yes | Source code repos |
 | UNKNOWN | No | No | Needs manual classification |
+
+**Manual Zone Classification:**
+- Users can manually override zone classification for any folder via the UI
+- Zone classifications are hierarchical: child folders inherit parent zone unless explicitly overridden
+- When a folder is marked as CODE zone, a GENERIC code project is automatically created if the scanner didn't detect code project markers
+- When a folder's zone is changed FROM CODE to another zone, associated code projects are automatically filtered out from the Code Projects tab
+- Zone changes are stored in the `folder_zone` database table with `(source_id, folder_path)` as the composite key
 
 ### Software Roots
 
@@ -558,6 +572,8 @@ Before submitting PR:
 - ✅ Test coverage >80% for new code
 - ✅ PLAN.md updated with progress
 - ✅ Commit messages are clear and descriptive
+- ✅ **Documentation updated** (CLAUDE.md and relevant docs files)
+- ✅ **Coding principles checked** (short methods, single responsibility, testability, etc.)
 
 ### Merge & Continue
 

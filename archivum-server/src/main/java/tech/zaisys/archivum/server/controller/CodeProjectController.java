@@ -29,13 +29,14 @@ public class CodeProjectController {
     /**
      * Get all code projects.
      * Returns projects ordered by scan date (most recent first).
+     * Excludes projects whose folders have been reclassified to non-CODE zones.
      *
-     * @return List of all code projects
+     * @return List of all code projects in CODE zone
      */
     @GetMapping
     public ResponseEntity<List<CodeProjectDto>> getAllProjects() {
         log.info("GET /api/code-projects");
-        List<CodeProjectDto> projects = codeProjectService.findAllByRecentFirst();
+        List<CodeProjectDto> projects = codeProjectService.findAllByRecentFirstExcludingNonCodeZones();
         return ResponseEntity.ok(projects);
     }
 
@@ -95,6 +96,7 @@ public class CodeProjectController {
     /**
      * Get duplicate projects (projects with same content hash).
      * Groups projects by content hash where count > 1.
+     * Only includes projects in CODE zone.
      *
      * @return Map of content hash to list of duplicate projects
      */
@@ -102,7 +104,7 @@ public class CodeProjectController {
     public ResponseEntity<Map<String, List<CodeProjectDto>>> getDuplicates() {
         log.info("GET /api/code-projects/duplicates");
 
-        List<CodeProjectDto> allProjects = codeProjectService.findAll();
+        List<CodeProjectDto> allProjects = codeProjectService.findAllByRecentFirstExcludingNonCodeZones();
 
         // Group by content hash
         Map<String, List<CodeProjectDto>> grouped = allProjects.stream()
@@ -158,6 +160,7 @@ public class CodeProjectController {
 
     /**
      * Get statistics about code projects.
+     * Only includes projects in CODE zone.
      *
      * @return Statistics map
      */
@@ -165,7 +168,7 @@ public class CodeProjectController {
     public ResponseEntity<Map<String, Object>> getStatistics() {
         log.info("GET /api/code-projects/stats");
 
-        List<CodeProjectDto> allProjects = codeProjectService.findAll();
+        List<CodeProjectDto> allProjects = codeProjectService.findAllByRecentFirstExcludingNonCodeZones();
 
         // Count by type
         Map<ProjectType, Long> byType = allProjects.stream()

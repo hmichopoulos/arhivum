@@ -7,10 +7,12 @@ import org.springframework.transaction.annotation.Transactional;
 import tech.zaisys.archivum.api.dto.CodeProjectDto;
 import tech.zaisys.archivum.api.dto.ProjectIdentityDto;
 import tech.zaisys.archivum.api.enums.ProjectType;
+import tech.zaisys.archivum.api.enums.Zone;
 import tech.zaisys.archivum.server.domain.CodeProject;
 import tech.zaisys.archivum.server.repository.CodeProjectRepository;
 
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -24,6 +26,7 @@ import java.util.stream.Collectors;
 public class CodeProjectService {
 
     private final CodeProjectRepository repository;
+    private final FolderZoneService folderZoneService;
 
     /**
      * Save a code project from DTO.
@@ -76,6 +79,70 @@ public class CodeProjectService {
         return repository.findAllByOrderByScannedAtDesc().stream()
             .map(this::toDto)
             .collect(Collectors.toList());
+    }
+
+    /**
+     * Find all projects ordered by scan date (most recent first),
+     * excluding projects whose folders have been reclassified to non-CODE zones.
+     *
+     * A project is included if:
+     * - Its folder has explicit zone CODE, OR
+     * - Its folder inherits zone CODE from parent, OR
+     * - Its folder has no explicit zone set (default behavior)
+     *
+     * A project is excluded if:
+     * - Its folder has explicit zone set to something other than CODE
+     */
+    public List<CodeProjectDto> findAllByRecentFirstExcludingNonCodeZones() {
+        List<CodeProject> allProjects = repository.findAllByOrderByScannedAtDesc();
+
+        // Group projects by source ID for efficient zone lookup
+        Map<UUID, List<CodeProject>> projectsBySource = allProjects.stream()
+            .collect(Collectors.groupingBy(CodeProject::getSourceId));
+
+        List<CodeProjectDto> result = new java.util.ArrayList<>();
+
+        // For each source, load zones and filter projects
+        for (Map.Entry<UUID, List<CodeProject>> entry : projectsBySource.entrySet()) {
+            UUID sourceId = entry.getKey();
+            List<CodeProject> sourceProjects = entry.getValue();
+
+            // Load folder zones for this source
+            Map<String, Zone> folderZoneMap = folderZoneService.loadFolderZones(sourceId);
+
+            // Filter projects based on zone
+            for (CodeProject project : sourceProjects) {
+                if (shouldIncludeProject(sourceId, project.getRootPath(), folderZoneMap)) {
+                    result.add(toDto(project));
+                }
+            }
+        }
+
+        log.debug("Filtered {} projects down to {} CODE zone projects",
+            allProjects.size(), result.size());
+
+        return result;
+    }
+
+    /**
+     * Determine if a code project should be included based on its zone classification.
+     *
+     * @param sourceId Source ID
+     * @param rootPath Project root path
+     * @param folderZoneMap Preloaded folder zones for the source
+     * @return true if project should be included, false otherwise
+     */
+    private boolean shouldIncludeProject(UUID sourceId, String rootPath, Map<String, Zone> folderZoneMap) {
+        FolderZoneService.ZoneResult zoneResult = folderZoneService.getZoneForFolder(
+            sourceId, rootPath, folderZoneMap);
+
+        // If no zone set (null), include it (default behavior)
+        if (zoneResult == null) {
+            return true;
+        }
+
+        // Only include if zone is CODE
+        return zoneResult.zone() == Zone.CODE;
     }
 
     /**

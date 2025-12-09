@@ -197,13 +197,13 @@ function TreeNode({ node, level, sourceId, codeProjects, onFileClick, onDuplicat
         >
           {node.name}
         </span>
-        {node.zone && node.fileId && (
+        {node.fileId && (
           <ZoneSelector
             fileId={node.fileId}
-            currentZone={node.zone}
-            onZoneChange={(newZone) => {
-              // Optimistically update the node
-              node.zone = newZone;
+            currentZone={node.zone || Zone.UNKNOWN}
+            isInherited={node.isInherited}
+            onZoneChange={() => {
+              onTreeUpdate?.();
             }}
           />
         )}
@@ -242,7 +242,7 @@ function TreeNode({ node, level, sourceId, codeProjects, onFileClick, onDuplicat
           folderPath={node.path}
           currentZone={node.zone || Zone.UNKNOWN}
           isInherited={node.isInherited}
-          onZoneChange={(newZone) => {
+          onZoneChange={() => {
             onTreeUpdate?.(); // Refetch tree to get updated zones
           }}
         />

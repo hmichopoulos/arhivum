@@ -3,6 +3,7 @@
  */
 
 import type { ScannedFile, FileBatch, FileBatchResult } from '../types/file';
+import type { Zone } from '../types/zone';
 
 const API_BASE = '/api/files';
 
@@ -70,6 +71,23 @@ export async function getFileDuplicates(fileId: string): Promise<ScannedFile[]> 
   const response = await fetch(`${API_BASE}/${fileId}/duplicates`);
   if (!response.ok) {
     throw new Error(`Failed to fetch duplicates for file ${fileId}`);
+  }
+  return response.json();
+}
+
+/**
+ * Update the zone classification for a file.
+ */
+export async function updateFileZone(fileId: string, zone: Zone): Promise<ScannedFile> {
+  const response = await fetch(`${API_BASE}/${fileId}/zone`, {
+    method: 'PATCH',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({ zone })
+  });
+  if (!response.ok) {
+    throw new Error(`Failed to update zone for file ${fileId}`);
   }
   return response.json();
 }

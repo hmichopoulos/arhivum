@@ -6,6 +6,7 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import tech.zaisys.archivum.api.enums.FileStatus;
+import tech.zaisys.archivum.api.enums.Zone;
 
 import java.time.Instant;
 import java.util.UUID;
@@ -84,6 +85,11 @@ public class FileDto {
      * File status
      */
     private FileStatus status;
+
+    /**
+     * Classification zone
+     */
+    private Zone zone;
 
     /**
      * Whether this file is a duplicate

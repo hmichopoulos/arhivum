@@ -10,6 +10,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import tech.zaisys.archivum.api.dto.FileBatchDto;
 import tech.zaisys.archivum.api.dto.FileDto;
+import tech.zaisys.archivum.api.enums.Zone;
 import tech.zaisys.archivum.server.domain.ScannedFile;
 import tech.zaisys.archivum.server.domain.Source;
 import tech.zaisys.archivum.server.mapper.FileMapper;
@@ -163,5 +164,25 @@ public class FileService {
         return duplicates.stream()
             .map(fileMapper::toDto)
             .toList();
+    }
+
+    /**
+     * Update the zone classification for a file.
+     *
+     * @param fileId File ID
+     * @param zone New zone
+     * @return Updated file DTO
+     */
+    @Transactional
+    public FileDto updateZone(UUID fileId, Zone zone) {
+        log.info("Updating zone for file {} to {}", fileId, zone);
+
+        ScannedFile file = fileRepository.findById(fileId)
+            .orElseThrow(() -> new IllegalArgumentException("File not found: " + fileId));
+
+        file.setZone(zone);
+        ScannedFile saved = fileRepository.save(file);
+
+        return fileMapper.toDto(saved);
     }
 }

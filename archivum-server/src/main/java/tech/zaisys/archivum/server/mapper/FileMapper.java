@@ -35,6 +35,7 @@ public class FileMapper {
             .mimeType(dto.getMimeType())
             .exifMetadata(dto.getExif())
             .status(dto.getStatus())
+            .zone(dto.getZone())
             .isDuplicate(dto.getIsDuplicate() != null ? dto.getIsDuplicate() : false)
             .scannedAt(dto.getScannedAt())
             .build();
@@ -74,6 +75,7 @@ public class FileMapper {
             .mimeType(entity.getMimeType())
             .exif(entity.getExifMetadata())
             .status(entity.getStatus())
+            .zone(entity.getZone())
             .isDuplicate(entity.getIsDuplicate())
             .originalFileId(entity.getOriginalFile() != null ?
                 entity.getOriginalFile().getId() : null)

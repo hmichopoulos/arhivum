@@ -181,8 +181,34 @@ public class FolderTreeService {
      * @return FolderNodeDto with pre-calculated statistics and zone information
      */
     private FolderNodeDto convertToDto(TreeNode node, UUID sourceId, Map<String, tech.zaisys.archivum.api.enums.Zone> folderZoneMap) {
+        return convertToDto(node, sourceId, folderZoneMap, null);
+    }
+
+    /**
+     * Convert internal tree node to DTO with parent zone for inheritance.
+     *
+     * @param node Tree node to convert
+     * @param sourceId Source ID for zone lookup
+     * @param folderZoneMap Map of folder paths to explicit zones
+     * @param parentZoneResult Parent folder's zone result (for file inheritance)
+     * @return FolderNodeDto with pre-calculated statistics and zone information
+     */
+    private FolderNodeDto convertToDto(TreeNode node, UUID sourceId,
+                                       Map<String, tech.zaisys.archivum.api.enums.Zone> folderZoneMap,
+                                       FolderZoneService.ZoneResult parentZoneResult) {
         if (node instanceof FileNode) {
             FileNode fileNode = (FileNode) node;
+
+            // Determine file's zone (explicit or inherited from parent folder)
+            tech.zaisys.archivum.api.enums.Zone fileZone = fileNode.zone;
+            boolean isInherited = false;
+
+            if (fileZone == null && parentZoneResult != null) {
+                // File has no explicit zone, inherit from parent folder
+                fileZone = parentZoneResult.zone();
+                isInherited = true;
+            }
+
             return FolderNodeDto.builder()
                 .name(fileNode.name)
                 .path(fileNode.path)
@@ -191,12 +217,16 @@ public class FolderTreeService {
                 .size(fileNode.size)
                 .extension(fileNode.extension)
                 .isDuplicate(fileNode.isDuplicate)
-                .zone(fileNode.zone)
-                .isInherited(false) // Files have explicit zones
+                .zone(fileZone)
+                .isInherited(isInherited)
                 .children(List.of())
                 .build();
         } else {
             FolderNode folderNode = (FolderNode) node;
+
+            // Get zone for this folder (with inheritance)
+            FolderZoneService.ZoneResult zoneResult = folderZoneService.getZoneForFolder(
+                sourceId, folderNode.path, folderZoneMap);
 
             // Convert children and accumulate stats in a single pass
             int totalFileCount = 0;
@@ -213,7 +243,8 @@ public class FolderTreeService {
 
             // Process children and accumulate stats
             for (TreeNode child : sortedChildren) {
-                FolderNodeDto childDto = convertToDto(child, sourceId, folderZoneMap);
+                // Pass this folder's zone to children so files can inherit
+                FolderNodeDto childDto = convertToDto(child, sourceId, folderZoneMap, zoneResult);
                 childDtos.add(childDto);
 
                 // Accumulate stats from child
@@ -226,10 +257,6 @@ public class FolderTreeService {
                     totalSize += (childDto.getTotalSize() != null ? childDto.getTotalSize() : 0);
                 }
             }
-
-            // Get zone for this folder (with inheritance)
-            FolderZoneService.ZoneResult zoneResult = folderZoneService.getZoneForFolder(
-                sourceId, folderNode.path, folderZoneMap);
 
             return FolderNodeDto.builder()
                 .name(folderNode.name)

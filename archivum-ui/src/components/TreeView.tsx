@@ -9,6 +9,7 @@ import { ScannedFile } from '../types/file';
 import { getFileDuplicates } from '../api/files';
 import { DuplicateLocationsModal } from './DuplicateLocationsModal';
 import { ProjectDetailsModal } from './ProjectDetailsModal';
+import { ZoneSelector } from './ZoneSelector';
 import { getFileIcon, getProjectTypeIcon, FOLDER_ICON, OPEN_FOLDER_ICON } from '../utils/fileIcons';
 
 type TreeViewProps = {
@@ -189,6 +190,16 @@ function TreeNode({ node, level, codeProjects, onFileClick, onDuplicateClick, on
         >
           {node.name}
         </span>
+        {node.zone && node.fileId && (
+          <ZoneSelector
+            fileId={node.fileId}
+            currentZone={node.zone}
+            onZoneChange={(newZone) => {
+              // Optimistically update the node
+              node.zone = newZone;
+            }}
+          />
+        )}
         {node.isDuplicate && node.fileId && (
           <button
             onClick={(e) => {

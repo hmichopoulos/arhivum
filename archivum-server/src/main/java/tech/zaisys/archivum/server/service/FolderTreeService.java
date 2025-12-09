@@ -180,7 +180,8 @@ public class FolderTreeService {
             file.getId(),
             file.getSize(),
             file.getExtension(),
-            file.getIsDuplicate()
+            file.getIsDuplicate(),
+            file.getZone()
         );
         currentFolder.children.add(fileNode);
     }
@@ -202,6 +203,7 @@ public class FolderTreeService {
                 .size(fileNode.size)
                 .extension(fileNode.extension)
                 .isDuplicate(fileNode.isDuplicate)
+                .zone(fileNode.zone)
                 .children(List.of())
                 .build();
         } else {
@@ -270,14 +272,16 @@ public class FolderTreeService {
         long size;
         String extension;
         boolean isDuplicate;
+        tech.zaisys.archivum.api.enums.Zone zone;
 
-        FileNode(String path, String name, UUID fileId, long size, String extension, boolean isDuplicate) {
+        FileNode(String path, String name, UUID fileId, long size, String extension, boolean isDuplicate, tech.zaisys.archivum.api.enums.Zone zone) {
             super(path);
             this.name = name;
             this.fileId = fileId;
             this.size = size;
             this.extension = extension;
             this.isDuplicate = isDuplicate;
+            this.zone = zone;
         }
     }
 }

@@ -2,6 +2,7 @@ package tech.zaisys.archivum.api.dto;
 
 import lombok.Builder;
 import lombok.Value;
+import tech.zaisys.archivum.api.enums.Zone;
 
 import java.util.List;
 import java.util.UUID;
@@ -48,6 +49,11 @@ public class FolderNodeDto {
      * Whether file is a duplicate (only for FILE type).
      */
     Boolean isDuplicate;
+
+    /**
+     * Zone classification (only for FILE type).
+     */
+    Zone zone;
 
     /**
      * Child nodes (only for FOLDER type).

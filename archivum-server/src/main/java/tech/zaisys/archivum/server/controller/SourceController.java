@@ -103,6 +103,16 @@ public class SourceController {
 
         log.info("PATCH /api/sources/{}/folders/zone - path={}, zone={}", id, folderPath, zoneStr);
 
+        // Validate required parameters
+        if (folderPath == null || folderPath.isBlank()) {
+            return ResponseEntity.badRequest()
+                .body(Map.of("error", "folderPath is required"));
+        }
+        if (zoneStr == null || zoneStr.isBlank()) {
+            return ResponseEntity.badRequest()
+                .body(Map.of("error", "zone is required"));
+        }
+
         try {
             Zone zone = Zone.valueOf(zoneStr);
             folderZoneService.setFolderZone(id, folderPath, zone);

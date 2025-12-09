@@ -18,6 +18,7 @@ export type FolderNode = {
   extension?: string;
   isDuplicate?: boolean;
   zone?: Zone;
+  isInherited?: boolean;
   children: FolderNode[];
   fileCount?: number;
   totalSize?: number;

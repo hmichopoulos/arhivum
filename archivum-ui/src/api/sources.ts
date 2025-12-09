@@ -4,6 +4,7 @@
 
 import type { Source, SourceStats } from '../types/source';
 import type { FolderNode } from '../types/folder';
+import { Zone } from '../types/zone';
 
 const API_BASE = '/api/sources';
 
@@ -98,4 +99,20 @@ export async function getSourceTree(sourceId: string): Promise<FolderNode> {
     throw new Error(`Failed to fetch tree for source ${sourceId}`);
   }
   return response.json();
+}
+
+/**
+ * Update the zone classification for a folder.
+ */
+export async function updateFolderZone(sourceId: string, folderPath: string, zone: Zone): Promise<void> {
+  const response = await fetch(`${API_BASE}/${sourceId}/folders/zone`, {
+    method: 'PATCH',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({ folderPath, zone })
+  });
+  if (!response.ok) {
+    throw new Error(`Failed to update zone for folder ${folderPath}`);
+  }
 }

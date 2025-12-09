@@ -25,6 +25,7 @@ import java.util.*;
 public class FolderTreeService {
 
     private final ScannedFileRepository fileRepository;
+    private final FolderZoneService folderZoneService;
 
     private static final int PAGE_SIZE = 1000;
     private static final int MAX_TREE_NODES = 100_000; // Limit total nodes (files + folders)
@@ -69,6 +70,9 @@ public class FolderTreeService {
      * @throws TreeSizeLimitExceededException if tree exceeds memory limits
      */
     private FolderNodeDto buildTreeWithPagination(UUID sourceId) {
+        // Load all folder zones for this source
+        Map<String, tech.zaisys.archivum.api.enums.Zone> folderZoneMap = folderZoneService.loadFolderZones(sourceId);
+
         Map<String, FolderNode> folderMap = new HashMap<>();
         FolderNode root = new FolderNode("");
 
@@ -114,26 +118,7 @@ public class FolderTreeService {
         log.info("Built tree: {} files, {} folders, estimated ~{}MB memory",
             totalFiles, folderMap.size(), estimatedMemoryBytes / 1_000_000);
 
-        return convertToDto(root);
-    }
-
-    /**
-     * Build a folder tree from a list of files.
-     * Used by tests and for small file sets.
-     *
-     * @param files List of files
-     * @return Root folder node
-     */
-    private FolderNodeDto buildTreeFromFiles(List<ScannedFile> files) {
-        Map<String, FolderNode> folderMap = new HashMap<>();
-        FolderNode root = new FolderNode("");
-
-        // Process each file
-        for (ScannedFile file : files) {
-            addFileToTree(file, root, folderMap);
-        }
-
-        return convertToDto(root);
+        return convertToDto(root, sourceId, folderZoneMap);
     }
 
     /**
@@ -190,9 +175,12 @@ public class FolderTreeService {
      * Convert internal tree node to DTO.
      * Calculates folder statistics in a single pass (bottom-up).
      *
-     * @return FolderNodeDto with pre-calculated statistics
+     * @param node Tree node to convert
+     * @param sourceId Source ID for zone lookup
+     * @param folderZoneMap Map of folder paths to explicit zones
+     * @return FolderNodeDto with pre-calculated statistics and zone information
      */
-    private FolderNodeDto convertToDto(TreeNode node) {
+    private FolderNodeDto convertToDto(TreeNode node, UUID sourceId, Map<String, tech.zaisys.archivum.api.enums.Zone> folderZoneMap) {
         if (node instanceof FileNode) {
             FileNode fileNode = (FileNode) node;
             return FolderNodeDto.builder()
@@ -204,6 +192,7 @@ public class FolderTreeService {
                 .extension(fileNode.extension)
                 .isDuplicate(fileNode.isDuplicate)
                 .zone(fileNode.zone)
+                .isInherited(false) // Files have explicit zones
                 .children(List.of())
                 .build();
         } else {
@@ -224,7 +213,7 @@ public class FolderTreeService {
 
             // Process children and accumulate stats
             for (TreeNode child : sortedChildren) {
-                FolderNodeDto childDto = convertToDto(child);
+                FolderNodeDto childDto = convertToDto(child, sourceId, folderZoneMap);
                 childDtos.add(childDto);
 
                 // Accumulate stats from child
@@ -238,10 +227,16 @@ public class FolderTreeService {
                 }
             }
 
+            // Get zone for this folder (with inheritance)
+            FolderZoneService.ZoneResult zoneResult = folderZoneService.getZoneForFolder(
+                sourceId, folderNode.path, folderZoneMap);
+
             return FolderNodeDto.builder()
                 .name(folderNode.name)
                 .path(folderNode.path)
                 .type(FolderNodeDto.NodeType.FOLDER)
+                .zone(zoneResult != null ? zoneResult.zone() : null)
+                .isInherited(zoneResult != null ? zoneResult.isInherited() : null)
                 .children(childDtos)
                 .fileCount(totalFileCount)
                 .totalSize(totalSize)

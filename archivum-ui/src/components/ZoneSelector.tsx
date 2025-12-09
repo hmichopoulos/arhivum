@@ -5,14 +5,21 @@
 import { useState } from 'react';
 import { Zone, ZONE_LABELS, ZONE_COLORS } from '../types/zone';
 import { updateFileZone } from '../api/files';
+import { updateFolderZone } from '../api/sources';
 
 type ZoneSelectorProps = {
-  fileId: string;
+  // For files
+  fileId?: string;
+  // For folders
+  sourceId?: string;
+  folderPath?: string;
+  // Common props
   currentZone: Zone;
+  isInherited?: boolean;
   onZoneChange?: (newZone: Zone) => void;
 };
 
-export function ZoneSelector({ fileId, currentZone, onZoneChange }: ZoneSelectorProps) {
+export function ZoneSelector({ fileId, sourceId, folderPath, currentZone, isInherited, onZoneChange }: ZoneSelectorProps) {
   const [isEditing, setIsEditing] = useState(false);
   const [selectedZone, setSelectedZone] = useState<Zone>(currentZone);
   const [isLoading, setIsLoading] = useState(false);
@@ -31,7 +38,11 @@ export function ZoneSelector({ fileId, currentZone, onZoneChange }: ZoneSelector
     setIsLoading(true);
 
     try {
-      await updateFileZone(fileId, newZone);
+      if (fileId) {
+        await updateFileZone(fileId, newZone);
+      } else if (sourceId && folderPath) {
+        await updateFolderZone(sourceId, folderPath, newZone);
+      }
       setIsEditing(false);
       onZoneChange?.(newZone);
     } catch (err) {
@@ -86,10 +97,11 @@ export function ZoneSelector({ fileId, currentZone, onZoneChange }: ZoneSelector
         text-xs px-2 py-0.5 rounded font-medium cursor-pointer
         hover:opacity-80 transition-opacity
         ${ZONE_COLORS[currentZone]}
+        ${isInherited ? 'italic opacity-90' : ''}
       `}
-      title="Click to change zone classification"
+      title={isInherited ? "Zone inherited from parent folder - click to override" : "Click to change zone classification"}
     >
-      {ZONE_LABELS[currentZone]}
+      {ZONE_LABELS[currentZone]}{isInherited && ' (Inherited)'}
     </button>
   );
 }

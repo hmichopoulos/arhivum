@@ -51,9 +51,15 @@ public class FolderNodeDto {
     Boolean isDuplicate;
 
     /**
-     * Zone classification (only for FILE type).
+     * Zone classification (for both FILE and FOLDER types).
      */
     Zone zone;
+
+    /**
+     * Whether the zone is inherited from a parent folder (only for FOLDER type).
+     * For files, this is always false (files have explicit zones).
+     */
+    Boolean isInherited;
 
     /**
      * Child nodes (only for FOLDER type).

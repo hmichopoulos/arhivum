@@ -4,6 +4,7 @@
 
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useQueryClient } from '@tanstack/react-query';
 import { useSource, useSourceTree } from '../hooks/useSources';
 import { useProjectsBySource } from '../hooks/useCodeProjects';
 import { TreeView } from '../components/TreeView';
@@ -17,11 +18,16 @@ type SourceDetailsPageProps = {
 
 export function SourceDetailsPage({ sourceId }: SourceDetailsPageProps) {
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const { data: source, isLoading: sourceLoading } = useSource(sourceId);
   const { data: tree, isLoading: treeLoading } = useSourceTree(sourceId);
   const { data: codeProjects = [] } = useProjectsBySource(sourceId);
   const [selectedFileId, setSelectedFileId] = useState<string | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+
+  const handleTreeUpdate = () => {
+    queryClient.invalidateQueries({ queryKey: ['sources', sourceId, 'tree'] });
+  };
 
   const formatBytes = (bytes: number): string => {
     if (bytes === 0) return '0 B';
@@ -253,7 +259,7 @@ export function SourceDetailsPage({ sourceId }: SourceDetailsPageProps) {
                 </div>
               )}
             >
-              <TreeView tree={tree} codeProjects={codeProjects} onFileClick={handleFileClick} />
+              <TreeView tree={tree} sourceId={sourceId} codeProjects={codeProjects} onFileClick={handleFileClick} onTreeUpdate={handleTreeUpdate} />
             </ErrorBoundary>
           ) : (
             <div className="text-center py-12 text-gray-500">

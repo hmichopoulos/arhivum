@@ -100,7 +100,6 @@ export function TreeView({ tree, sourceId, codeProjects = [], onFileClick, onTre
       case ProjectType.PYTHON: return 'bg-blue-100 text-blue-800';
       case ProjectType.GO: return 'bg-cyan-100 text-cyan-800';
       case ProjectType.RUST: return 'bg-amber-100 text-amber-800';
-      case ProjectType.GIT: return 'bg-gray-100 text-gray-800';
       case ProjectType.GENERIC: return 'bg-purple-100 text-purple-800';
       default: return 'bg-gray-100 text-gray-800';
     }

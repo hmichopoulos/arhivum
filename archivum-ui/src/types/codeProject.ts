@@ -9,7 +9,6 @@ export enum ProjectType {
   PYTHON = 'PYTHON',
   GO = 'GO',
   RUST = 'RUST',
-  GIT = 'GIT',
   GENERIC = 'GENERIC'
 }
 

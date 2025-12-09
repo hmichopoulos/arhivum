@@ -16,7 +16,6 @@ export function DuplicatesView() {
       case ProjectType.PYTHON: return '🐍';
       case ProjectType.GO: return '🐹';
       case ProjectType.RUST: return '🦀';
-      case ProjectType.GIT: return '🔧';
       case ProjectType.GENERIC: return '📁';
       default: return '💻';
     }

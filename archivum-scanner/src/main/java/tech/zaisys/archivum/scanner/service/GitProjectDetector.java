@@ -45,7 +45,7 @@ public class GitProjectDetector implements ProjectDetector {
             String identifier = remote + "@" + branch;
 
             ProjectIdentityDto identity = ProjectIdentityDto.builder()
-                .type(ProjectType.GIT)
+                .type(ProjectType.GENERIC)
                 .name(repoName)
                 .gitRemote(remote)
                 .gitBranch(branch)

@@ -96,6 +96,12 @@ archivum/
 
 ## Recent Updates (December 2025)
 
+### Project Type Clarification (Issue #33)
+- ✅ Removed GIT as a project type (it's source control, not a project type)
+- ✅ Git repositories without build markers now classified as GENERIC
+- ✅ Git information (remote, branch, commit) still tracked separately
+- ✅ Updated UI to remove GIT-specific icons and colors
+
 ### Code Projects Search (Issue #30)
 - ✅ Added search functionality to Code Projects screen
 - ✅ Search across multiple fields: name, type, path, version, groupId, identifier

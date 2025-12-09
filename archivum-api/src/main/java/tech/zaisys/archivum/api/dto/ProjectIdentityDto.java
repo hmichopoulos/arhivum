@@ -62,8 +62,7 @@ public class ProjectIdentityDto {
      * - NPM: "name:version"
      * - Go: "module-path"
      * - Python/Rust: "name:version"
-     * - Git: "remote@branch"
-     * - Generic: "unknown:foldername"
+     * - Generic: "unknown:foldername" or "remote@branch" (for Git repos)
      */
     private String identifier;
 }

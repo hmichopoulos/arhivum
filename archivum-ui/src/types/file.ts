@@ -2,6 +2,8 @@
  * Type definitions for File domain.
  */
 
+import { Zone } from './zone';
+
 export enum FileStatus {
   DISCOVERED = 'DISCOVERED',
   HASHED = 'HASHED',
@@ -38,6 +40,7 @@ export type ScannedFile = {
   mimeType?: string;
   exif?: ExifData;
   status: FileStatus;
+  zone?: Zone;
   isDuplicate: boolean;
   originalFileId?: string;
   scannedAt: string;

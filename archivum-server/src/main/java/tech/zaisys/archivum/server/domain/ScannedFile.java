@@ -9,6 +9,7 @@ import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
 import tech.zaisys.archivum.api.dto.ExifMetadata;
 import tech.zaisys.archivum.api.enums.FileStatus;
+import tech.zaisys.archivum.api.enums.Zone;
 
 import java.time.Instant;
 import java.util.UUID;
@@ -71,6 +72,11 @@ public class ScannedFile {
     @Column(nullable = false, length = 50)
     @Builder.Default
     private FileStatus status = FileStatus.HASHED;
+
+    @Enumerated(EnumType.STRING)
+    @Column(length = 50)
+    @Builder.Default
+    private Zone zone = Zone.UNKNOWN;
 
     @Column(name = "is_duplicate", nullable = false)
     @Builder.Default

@@ -8,6 +8,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import tech.zaisys.archivum.api.dto.FileBatchDto;
 import tech.zaisys.archivum.api.dto.FileDto;
+import tech.zaisys.archivum.api.enums.Zone;
 import tech.zaisys.archivum.server.service.FileBatchResult;
 import tech.zaisys.archivum.server.service.FileService;
 
@@ -110,5 +111,30 @@ public class FileController {
 
         List<FileDto> duplicates = fileService.findDuplicates(id);
         return ResponseEntity.ok(duplicates);
+    }
+
+    /**
+     * Update the zone classification for a file.
+     *
+     * PATCH /api/files/{id}/zone
+     *
+     * @param id File ID
+     * @param request Request body containing the new zone
+     * @return Updated file DTO
+     */
+    @PatchMapping("/{id}/zone")
+    public ResponseEntity<FileDto> updateZone(
+            @PathVariable UUID id,
+            @RequestBody Map<String, String> request) {
+        log.info("PATCH /api/files/{}/zone - zone={}", id, request.get("zone"));
+
+        try {
+            Zone zone = Zone.valueOf(request.get("zone"));
+            FileDto updated = fileService.updateZone(id, zone);
+            return ResponseEntity.ok(updated);
+        } catch (IllegalArgumentException e) {
+            log.error("Invalid zone or file not found: {}", e.getMessage());
+            return ResponseEntity.badRequest().build();
+        }
     }
 }

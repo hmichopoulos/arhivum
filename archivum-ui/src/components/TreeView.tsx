@@ -6,18 +6,22 @@ import { useState } from 'react';
 import { FolderNode, NodeType } from '../types/folder';
 import { CodeProject, ProjectType } from '../types/codeProject';
 import { ScannedFile } from '../types/file';
+import { Zone } from '../types/zone';
 import { getFileDuplicates } from '../api/files';
 import { DuplicateLocationsModal } from './DuplicateLocationsModal';
 import { ProjectDetailsModal } from './ProjectDetailsModal';
+import { ZoneSelector } from './ZoneSelector';
 import { getFileIcon, getProjectTypeIcon, FOLDER_ICON, OPEN_FOLDER_ICON } from '../utils/fileIcons';
 
 type TreeViewProps = {
   tree: FolderNode;
+  sourceId: string;
   codeProjects?: CodeProject[];
   onFileClick?: (fileId: string) => void;
+  onTreeUpdate?: () => void;
 };
 
-export function TreeView({ tree, codeProjects = [], onFileClick }: TreeViewProps) {
+export function TreeView({ tree, sourceId, codeProjects = [], onFileClick, onTreeUpdate }: TreeViewProps) {
   const [modalState, setModalState] = useState<{
     isOpen: boolean;
     fileId: string | null;
@@ -111,11 +115,13 @@ export function TreeView({ tree, codeProjects = [], onFileClick }: TreeViewProps
               key={node.path || index}
               node={node}
               level={0}
+              sourceId={sourceId}
               codeProjects={codeProjects}
               onFileClick={onFileClick}
               onDuplicateClick={handleDuplicateClick}
               onProjectClick={handleProjectClick}
               getProjectTypeColor={getProjectTypeColor}
+              onTreeUpdate={onTreeUpdate}
             />
           ))
         ) : (
@@ -148,14 +154,16 @@ export function TreeView({ tree, codeProjects = [], onFileClick }: TreeViewProps
 type TreeNodeProps = {
   node: FolderNode;
   level: number;
+  sourceId: string;
   codeProjects: CodeProject[];
   onFileClick?: (fileId: string) => void;
   onDuplicateClick: (fileId: string) => void;
   onProjectClick: (project: CodeProject) => void;
   getProjectTypeColor: (type: ProjectType) => string;
+  onTreeUpdate?: () => void;
 };
 
-function TreeNode({ node, level, codeProjects, onFileClick, onDuplicateClick, onProjectClick, getProjectTypeColor }: TreeNodeProps) {
+function TreeNode({ node, level, sourceId, codeProjects, onFileClick, onDuplicateClick, onProjectClick, getProjectTypeColor, onTreeUpdate }: TreeNodeProps) {
   const [isExpanded, setIsExpanded] = useState(level < 2); // Auto-expand first 2 levels
 
   const formatBytes = (bytes?: number): string => {
@@ -189,6 +197,16 @@ function TreeNode({ node, level, codeProjects, onFileClick, onDuplicateClick, on
         >
           {node.name}
         </span>
+        {node.fileId && (
+          <ZoneSelector
+            fileId={node.fileId}
+            currentZone={node.zone || Zone.UNKNOWN}
+            isInherited={node.isInherited}
+            onZoneChange={() => {
+              onTreeUpdate?.();
+            }}
+          />
+        )}
         {node.isDuplicate && node.fileId && (
           <button
             onClick={(e) => {
@@ -219,6 +237,15 @@ function TreeNode({ node, level, codeProjects, onFileClick, onDuplicateClick, on
         </span>
         <span>{isExpanded ? OPEN_FOLDER_ICON : FOLDER_ICON}</span>
         <span className="flex-1 font-semibold text-gray-900">{node.name}</span>
+        <ZoneSelector
+          sourceId={sourceId}
+          folderPath={node.path}
+          currentZone={node.zone || Zone.UNKNOWN}
+          isInherited={node.isInherited}
+          onZoneChange={() => {
+            onTreeUpdate?.(); // Refetch tree to get updated zones
+          }}
+        />
         {codeProject && (
           <button
             onClick={(e) => {
@@ -250,11 +277,13 @@ function TreeNode({ node, level, codeProjects, onFileClick, onDuplicateClick, on
               key={child.path || index}
               node={child}
               level={level + 1}
+              sourceId={sourceId}
               codeProjects={codeProjects}
               onFileClick={onFileClick}
               onDuplicateClick={onDuplicateClick}
               onProjectClick={onProjectClick}
               getProjectTypeColor={getProjectTypeColor}
+              onTreeUpdate={onTreeUpdate}
             />
           ))}
         </div>

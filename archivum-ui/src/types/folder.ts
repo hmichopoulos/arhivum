@@ -2,6 +2,8 @@
  * Types for folder tree structure.
  */
 
+import { Zone } from './zone';
+
 export enum NodeType {
   FOLDER = 'FOLDER',
   FILE = 'FILE'
@@ -15,6 +17,8 @@ export type FolderNode = {
   size?: number;
   extension?: string;
   isDuplicate?: boolean;
+  zone?: Zone;
+  isInherited?: boolean;
   children: FolderNode[];
   fileCount?: number;
   totalSize?: number;

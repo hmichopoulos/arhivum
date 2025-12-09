@@ -60,6 +60,9 @@ dist/
 .env.local
 .env.*.local
 
+# Vite
+archivum-ui/.vite/
+
 # Database
 *.db
 *.sqlite

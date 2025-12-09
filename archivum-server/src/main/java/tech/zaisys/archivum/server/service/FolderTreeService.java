@@ -25,6 +25,7 @@ import java.util.*;
 public class FolderTreeService {
 
     private final ScannedFileRepository fileRepository;
+    private final FolderZoneService folderZoneService;
 
     private static final int PAGE_SIZE = 1000;
     private static final int MAX_TREE_NODES = 100_000; // Limit total nodes (files + folders)
@@ -69,6 +70,9 @@ public class FolderTreeService {
      * @throws TreeSizeLimitExceededException if tree exceeds memory limits
      */
     private FolderNodeDto buildTreeWithPagination(UUID sourceId) {
+        // Load all folder zones for this source
+        Map<String, tech.zaisys.archivum.api.enums.Zone> folderZoneMap = folderZoneService.loadFolderZones(sourceId);
+
         Map<String, FolderNode> folderMap = new HashMap<>();
         FolderNode root = new FolderNode("");
 
@@ -114,26 +118,7 @@ public class FolderTreeService {
         log.info("Built tree: {} files, {} folders, estimated ~{}MB memory",
             totalFiles, folderMap.size(), estimatedMemoryBytes / 1_000_000);
 
-        return convertToDto(root);
-    }
-
-    /**
-     * Build a folder tree from a list of files.
-     * Used by tests and for small file sets.
-     *
-     * @param files List of files
-     * @return Root folder node
-     */
-    private FolderNodeDto buildTreeFromFiles(List<ScannedFile> files) {
-        Map<String, FolderNode> folderMap = new HashMap<>();
-        FolderNode root = new FolderNode("");
-
-        // Process each file
-        for (ScannedFile file : files) {
-            addFileToTree(file, root, folderMap);
-        }
-
-        return convertToDto(root);
+        return convertToDto(root, sourceId, folderZoneMap);
     }
 
     /**
@@ -180,7 +165,8 @@ public class FolderTreeService {
             file.getId(),
             file.getSize(),
             file.getExtension(),
-            file.getIsDuplicate()
+            file.getIsDuplicate(),
+            file.getZone()
         );
         currentFolder.children.add(fileNode);
     }
@@ -189,11 +175,41 @@ public class FolderTreeService {
      * Convert internal tree node to DTO.
      * Calculates folder statistics in a single pass (bottom-up).
      *
-     * @return FolderNodeDto with pre-calculated statistics
+     * @param node Tree node to convert
+     * @param sourceId Source ID for zone lookup
+     * @param folderZoneMap Map of folder paths to explicit zones
+     * @return FolderNodeDto with pre-calculated statistics and zone information
      */
-    private FolderNodeDto convertToDto(TreeNode node) {
+    private FolderNodeDto convertToDto(TreeNode node, UUID sourceId, Map<String, tech.zaisys.archivum.api.enums.Zone> folderZoneMap) {
+        return convertToDto(node, sourceId, folderZoneMap, null);
+    }
+
+    /**
+     * Convert internal tree node to DTO with parent zone for inheritance.
+     *
+     * @param node Tree node to convert
+     * @param sourceId Source ID for zone lookup
+     * @param folderZoneMap Map of folder paths to explicit zones
+     * @param parentZoneResult Parent folder's zone result (for file inheritance)
+     * @return FolderNodeDto with pre-calculated statistics and zone information
+     */
+    private FolderNodeDto convertToDto(TreeNode node, UUID sourceId,
+                                       Map<String, tech.zaisys.archivum.api.enums.Zone> folderZoneMap,
+                                       FolderZoneService.ZoneResult parentZoneResult) {
         if (node instanceof FileNode) {
             FileNode fileNode = (FileNode) node;
+
+            // Determine file's zone (explicit or inherited from parent folder)
+            tech.zaisys.archivum.api.enums.Zone fileZone = fileNode.zone;
+            boolean isInherited = false;
+
+            // Files with null or UNKNOWN zone should inherit from parent folder
+            if ((fileZone == null || fileZone == tech.zaisys.archivum.api.enums.Zone.UNKNOWN) && parentZoneResult != null) {
+                // File has no explicit zone, inherit from parent folder
+                fileZone = parentZoneResult.zone();
+                isInherited = true;
+            }
+
             return FolderNodeDto.builder()
                 .name(fileNode.name)
                 .path(fileNode.path)
@@ -202,10 +218,16 @@ public class FolderTreeService {
                 .size(fileNode.size)
                 .extension(fileNode.extension)
                 .isDuplicate(fileNode.isDuplicate)
+                .zone(fileZone)
+                .isInherited(isInherited)
                 .children(List.of())
                 .build();
         } else {
             FolderNode folderNode = (FolderNode) node;
+
+            // Get zone for this folder (with inheritance)
+            FolderZoneService.ZoneResult zoneResult = folderZoneService.getZoneForFolder(
+                sourceId, folderNode.path, folderZoneMap);
 
             // Convert children and accumulate stats in a single pass
             int totalFileCount = 0;
@@ -222,7 +244,8 @@ public class FolderTreeService {
 
             // Process children and accumulate stats
             for (TreeNode child : sortedChildren) {
-                FolderNodeDto childDto = convertToDto(child);
+                // Pass this folder's zone to children so files can inherit
+                FolderNodeDto childDto = convertToDto(child, sourceId, folderZoneMap, zoneResult);
                 childDtos.add(childDto);
 
                 // Accumulate stats from child
@@ -240,6 +263,8 @@ public class FolderTreeService {
                 .name(folderNode.name)
                 .path(folderNode.path)
                 .type(FolderNodeDto.NodeType.FOLDER)
+                .zone(zoneResult != null ? zoneResult.zone() : null)
+                .isInherited(zoneResult != null ? zoneResult.isInherited() : null)
                 .children(childDtos)
                 .fileCount(totalFileCount)
                 .totalSize(totalSize)
@@ -270,14 +295,16 @@ public class FolderTreeService {
         long size;
         String extension;
         boolean isDuplicate;
+        tech.zaisys.archivum.api.enums.Zone zone;
 
-        FileNode(String path, String name, UUID fileId, long size, String extension, boolean isDuplicate) {
+        FileNode(String path, String name, UUID fileId, long size, String extension, boolean isDuplicate, tech.zaisys.archivum.api.enums.Zone zone) {
             super(path);
             this.name = name;
             this.fileId = fileId;
             this.size = size;
             this.extension = extension;
             this.isDuplicate = isDuplicate;
+            this.zone = zone;
         }
     }
 }

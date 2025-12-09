@@ -10,10 +10,13 @@ import tech.zaisys.archivum.api.dto.CreateSourceRequest;
 import tech.zaisys.archivum.api.dto.FolderNodeDto;
 import tech.zaisys.archivum.api.dto.SourceDto;
 import tech.zaisys.archivum.api.dto.SourceResponse;
+import tech.zaisys.archivum.api.enums.Zone;
 import tech.zaisys.archivum.server.service.FolderTreeService;
+import tech.zaisys.archivum.server.service.FolderZoneService;
 import tech.zaisys.archivum.server.service.SourceService;
 
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 /**
@@ -28,6 +31,7 @@ public class SourceController {
 
     private final SourceService sourceService;
     private final FolderTreeService folderTreeService;
+    private final FolderZoneService folderZoneService;
 
     /**
      * Create a new source.
@@ -79,6 +83,47 @@ public class SourceController {
         log.debug("GET /api/sources/{}/tree - Building folder tree", id);
         FolderNodeDto tree = folderTreeService.buildTree(id);
         return ResponseEntity.ok(tree);
+    }
+
+    /**
+     * Update zone classification for a folder.
+     *
+     * PATCH /api/sources/{id}/folders/zone
+     *
+     * @param id Source ID
+     * @param request Request body containing folder path and zone
+     * @return Success response
+     */
+    @PatchMapping("/{id}/folders/zone")
+    public ResponseEntity<?> updateFolderZone(
+            @PathVariable UUID id,
+            @RequestBody Map<String, String> request) {
+        String folderPath = request.get("folderPath");
+        String zoneStr = request.get("zone");
+
+        log.info("PATCH /api/sources/{}/folders/zone - path={}, zone={}", id, folderPath, zoneStr);
+
+        // Validate required parameters
+        if (folderPath == null || folderPath.isBlank()) {
+            return ResponseEntity.badRequest()
+                .body(Map.of("error", "folderPath is required"));
+        }
+        if (zoneStr == null || zoneStr.isBlank()) {
+            return ResponseEntity.badRequest()
+                .body(Map.of("error", "zone is required"));
+        }
+
+        try {
+            Zone zone = Zone.valueOf(zoneStr);
+            folderZoneService.setFolderZone(id, folderPath, zone);
+            // Invalidate tree cache since zones changed
+            folderTreeService.invalidateTree(id);
+            return ResponseEntity.ok(Map.of("success", true));
+        } catch (IllegalArgumentException e) {
+            log.error("Invalid zone or source not found: {}", e.getMessage());
+            return ResponseEntity.badRequest()
+                .body(Map.of("error", e.getMessage()));
+        }
     }
 
     /**

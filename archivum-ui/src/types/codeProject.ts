@@ -9,7 +9,6 @@ export enum ProjectType {
   PYTHON = 'PYTHON',
   GO = 'GO',
   RUST = 'RUST',
-  GIT = 'GIT',
   GENERIC = 'GENERIC'
 }
 
@@ -19,6 +18,9 @@ export type ProjectIdentity = {
   version?: string;
   groupId?: string;
   identifier: string;
+  gitRemote?: string;
+  gitBranch?: string;
+  gitCommit?: string;
 };
 
 export type CodeProject = {

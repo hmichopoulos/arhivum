@@ -65,7 +65,6 @@ const PROJECT_TYPE_ICONS: Record<ProjectType, string> = {
   [ProjectType.PYTHON]: '🐍',
   [ProjectType.GO]: '🐹',
   [ProjectType.RUST]: '🦀',
-  [ProjectType.GIT]: '🔧',
   [ProjectType.GENERIC]: '📁',
 };
 

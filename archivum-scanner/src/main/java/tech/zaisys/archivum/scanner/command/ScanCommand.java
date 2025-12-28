@@ -78,6 +78,25 @@ public class ScanCommand implements Callable<Integer> {
     )
     private boolean verbose;
 
+    @Option(
+        names = {"-s", "--server-url"},
+        description = "Server URL for automatic upload after scan (e.g., http://localhost:8080)"
+    )
+    private String serverUrl;
+
+    @Option(
+        names = {"--keep-output"},
+        description = "Keep output files after upload (default: cleanup after successful upload)"
+    )
+    private boolean keepOutput;
+
+    @Option(
+        names = {"--upload-timeout"},
+        description = "HTTP request timeout in seconds for upload (default: 60)",
+        defaultValue = "60"
+    )
+    private int uploadTimeout;
+
     @Override
     public Integer call() throws Exception {
         Instant startTime = Instant.now();
@@ -108,6 +127,11 @@ public class ScanCommand implements Callable<Integer> {
 
             writeSummary(context, files.size(), startTime);
             printResults(context);
+
+            // Upload to server if --server-url is provided
+            if (serverUrl != null && !serverUrl.isEmpty()) {
+                uploadToServer(context);
+            }
 
             return 0;
         } catch (Exception e) {
@@ -470,6 +494,72 @@ public class ScanCommand implements Callable<Integer> {
             System.out.println("⚠ Warnings: " + context.errors.size() + " files could not be processed");
             System.out.println("  See summary.json for details");
         }
+    }
+
+    /**
+     * Upload scan results to server.
+     *
+     * @param context Scan context
+     */
+    private void uploadToServer(ScanContext context) {
+        try {
+            Path sourceOutputDir = outputPath.toAbsolutePath().resolve(context.source.getId().toString());
+
+            System.out.println();
+            System.out.println("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+            System.out.println("Uploading to server: " + serverUrl);
+            System.out.println("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+
+            UploadService uploadService = new UploadService(serverUrl, uploadTimeout);
+            UploadService.UploadResult result = uploadService.upload(sourceOutputDir);
+
+            System.out.println();
+            System.out.println("Upload Complete!");
+            System.out.println("================");
+            System.out.println("Source ID:         " + result.sourceId);
+            System.out.println("Batches uploaded:  " + result.uploadedBatches);
+            System.out.println("Files uploaded:    " + result.uploadedFiles);
+            System.out.println("Projects uploaded: " + result.uploadedProjects);
+
+            // Cleanup output directory unless --keep-output is specified
+            if (!keepOutput) {
+                System.out.println();
+                System.out.println("Cleaning up local output directory...");
+                deleteDirectory(sourceOutputDir);
+                System.out.println("Cleanup complete.");
+            } else {
+                System.out.println();
+                System.out.println("Output files kept at: " + sourceOutputDir);
+            }
+
+        } catch (Exception e) {
+            log.error("Upload failed: {}", e.getMessage(), e);
+            System.err.println();
+            System.err.println("⚠ Upload failed: " + e.getMessage());
+            System.err.println("Output files preserved at: " +
+                outputPath.toAbsolutePath().resolve(context.source.getId().toString()));
+        }
+    }
+
+    /**
+     * Recursively delete a directory and all its contents.
+     *
+     * @param directory Directory to delete
+     */
+    private void deleteDirectory(Path directory) throws IOException {
+        if (!Files.exists(directory)) {
+            return;
+        }
+
+        Files.walk(directory)
+            .sorted(Comparator.reverseOrder())
+            .forEach(path -> {
+                try {
+                    Files.delete(path);
+                } catch (IOException e) {
+                    log.warn("Failed to delete {}: {}", path, e.getMessage());
+                }
+            });
     }
 
     /**

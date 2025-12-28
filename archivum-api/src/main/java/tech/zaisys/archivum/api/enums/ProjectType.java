@@ -36,12 +36,9 @@ public enum ProjectType {
     RUST("Rust", "Rust"),
 
     /**
-     * Git repository (.git/)
-     */
-    GIT("Git", "Various"),
-
-    /**
      * Generic/unknown code project
+     * Note: Git repositories without specific build tools are classified as GENERIC.
+     * Git information is tracked separately via gitRemote, gitBranch, gitCommit fields.
      */
     GENERIC("Generic", "Unknown");
 

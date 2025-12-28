@@ -3,6 +3,7 @@ package tech.zaisys.archivum.scanner.service;
 import lombok.extern.slf4j.Slf4j;
 import tech.zaisys.archivum.api.dto.ProjectIdentityDto;
 import tech.zaisys.archivum.api.enums.ProjectType;
+import tech.zaisys.archivum.scanner.util.GitInfoExtractor;
 
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
@@ -75,13 +76,22 @@ public class MavenProjectDetector implements ProjectDetector {
 
             String identifier = groupId + ":" + artifactId + ":" + version;
 
-            ProjectIdentityDto identity = ProjectIdentityDto.builder()
+            // Build base identity
+            ProjectIdentityDto.ProjectIdentityDtoBuilder identityBuilder = ProjectIdentityDto.builder()
                 .type(ProjectType.MAVEN)
                 .name(artifactId)
                 .version(version)
                 .groupId(groupId)
-                .identifier(identifier)
-                .build();
+                .identifier(identifier);
+
+            // Add Git information if available
+            GitInfoExtractor.extractGitInfo(folder).ifPresent(gitInfo -> {
+                identityBuilder.gitRemote(gitInfo.getRemote());
+                identityBuilder.gitBranch(gitInfo.getBranch());
+                identityBuilder.gitCommit(gitInfo.getCommit());
+            });
+
+            ProjectIdentityDto identity = identityBuilder.build();
 
             log.debug("Detected Maven project: {}", identifier);
             return Optional.of(identity);

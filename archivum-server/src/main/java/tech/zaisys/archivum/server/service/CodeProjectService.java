@@ -35,17 +35,24 @@ public class CodeProjectService {
 
     /**
      * Save a code project from DTO.
+     * Automatically sets the folder zone to CODE.
      */
     @Transactional
     public CodeProjectDto save(CodeProjectDto dto) {
         CodeProject entity = toEntity(dto);
         CodeProject saved = repository.save(entity);
-        log.info("Saved code project: {} ({})", saved.getIdentifier(), saved.getId());
+
+        // Automatically set folder zone to CODE when a code project is detected
+        folderZoneService.setFolderZone(saved.getSourceId(), saved.getRootPath(), Zone.CODE);
+
+        log.info("Saved code project: {} ({}) and set folder zone to CODE",
+            saved.getIdentifier(), saved.getId());
         return toDto(saved);
     }
 
     /**
      * Save multiple code projects.
+     * Automatically sets the folder zones to CODE.
      */
     @Transactional
     public List<CodeProjectDto> saveAll(List<CodeProjectDto> dtos) {
@@ -54,7 +61,13 @@ public class CodeProjectService {
             .collect(Collectors.toList());
 
         List<CodeProject> saved = repository.saveAll(entities);
-        log.info("Saved {} code projects", saved.size());
+
+        // Automatically set folder zones to CODE for all saved projects
+        for (CodeProject project : saved) {
+            folderZoneService.setFolderZone(project.getSourceId(), project.getRootPath(), Zone.CODE);
+        }
+
+        log.info("Saved {} code projects and set folder zones to CODE", saved.size());
 
         return saved.stream()
             .map(this::toDto)
@@ -261,7 +274,11 @@ public class CodeProjectService {
             .build();
 
         CodeProject saved = repository.save(project);
-        log.info("Created manual code project for folder: {} ({} files, {} bytes)",
+
+        // Automatically set folder zone to CODE
+        folderZoneService.setFolderZone(sourceId, folderPath, Zone.CODE);
+
+        log.info("Created manual code project for folder: {} ({} files, {} bytes) and set zone to CODE",
             folderPath, fileCount, totalSize);
 
         return Optional.of(toDto(saved));

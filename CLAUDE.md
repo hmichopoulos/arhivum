@@ -125,6 +125,29 @@ archivum/
 - ✅ Auto-creation of GENERIC code projects for folders manually marked as CODE
 - ✅ Zone changes reflected immediately in UI
 
+### Code Project Zones and Deduplication
+- ✅ All code projects automatically have their folder zone set to CODE
+- ✅ Zone is set when:
+  1. Scanner detects a code project (Maven, Gradle, NPM, etc.)
+  2. User manually marks a folder as CODE zone
+  3. Migration V009 ensures existing projects have CODE zone
+- ✅ Smart duplicate detection using build system identifiers
+- ✅ Projects matched by base identifier (without version):
+  - Maven: `groupId:artifactId` (strips :version)
+  - Gradle: `group:name` (strips :version)
+  - NPM: `name` or `@scope/name` (strips :version)
+  - Python: `name` (strips :version)
+  - Go: module path (no version in identifier)
+  - Rust: `name` (strips :version)
+- ✅ Duplicate types:
+  - EXACT: Same identifier AND same content hash (identical projects)
+  - SAME_PROJECT_DIFF_CONTENT: Same identifier, different files (diverged)
+  - DIFFERENT_VERSION: Same base identifier, different versions (e.g., 1.0.0 vs 2.0.0)
+- ✅ Deduplication rules for CODE zone:
+  - File-level dedup: NO (preserves project structure)
+  - Folder-level dedup: YES (can identify duplicate projects)
+- ✅ UI shows only project type badge (Gradle, Maven, etc.), zone badge hidden for code projects
+
 ### File Upload System (Milestone 3)
 - ✅ Implemented `upload` command for resilient two-step scanning workflow
 - ✅ Scanner can now upload previously generated scan results

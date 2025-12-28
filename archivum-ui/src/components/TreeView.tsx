@@ -236,15 +236,18 @@ function TreeNode({ node, level, sourceId, codeProjects, onFileClick, onDuplicat
         </span>
         <span>{isExpanded ? OPEN_FOLDER_ICON : FOLDER_ICON}</span>
         <span className="flex-1 font-semibold text-gray-900">{node.name}</span>
-        <ZoneSelector
-          sourceId={sourceId}
-          folderPath={node.path}
-          currentZone={node.zone || Zone.UNKNOWN}
-          isInherited={node.isInherited}
-          onZoneChange={() => {
-            onTreeUpdate?.(); // Refetch tree to get updated zones
-          }}
-        />
+        {/* Only show zone badge if this folder is NOT a code project */}
+        {!codeProject && (
+          <ZoneSelector
+            sourceId={sourceId}
+            folderPath={node.path}
+            currentZone={node.zone || Zone.UNKNOWN}
+            isInherited={node.isInherited}
+            onZoneChange={() => {
+              onTreeUpdate?.(); // Refetch tree to get updated zones
+            }}
+          />
+        )}
         {codeProject && (
           <button
             onClick={(e) => {

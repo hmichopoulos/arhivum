@@ -155,6 +155,126 @@ class CodeProjectDuplicateDetectionServiceTest {
         assertEquals(0, groups.size());
     }
 
+    @Test
+    void testDetectAllDuplicates_DifferentVersions_Maven() {
+        // Given: Same Maven project (groupId:artifactId), different versions
+        CodeProject p1 = createProject("com.example:my-api:1.0.0", "hash123", 100);
+        CodeProject p2 = createProject("com.example:my-api:2.0.0", "hash456", 105);
+
+        when(repository.findAll()).thenReturn(List.of(p1, p2));
+
+        // When
+        List<CodeProjectDuplicateGroup> groups = service.detectAllDuplicates();
+
+        // Then: Should detect as DIFFERENT_VERSION duplicates
+        assertEquals(1, groups.size());
+        CodeProjectDuplicateGroup group = groups.get(0);
+        assertEquals(DuplicateType.DIFFERENT_VERSION, group.getDuplicateType());
+        assertEquals(2, group.getMembers().size());
+    }
+
+    @Test
+    void testDetectAllDuplicates_DifferentVersions_NPM() {
+        // Given: Same NPM package, different versions
+        CodeProject p1 = createProject("my-package:1.0.0", "hash123", 50);
+        CodeProject p2 = createProject("my-package:2.0.0", "hash456", 55);
+
+        when(repository.findAll()).thenReturn(List.of(p1, p2));
+
+        // When
+        List<CodeProjectDuplicateGroup> groups = service.detectAllDuplicates();
+
+        // Then: Should detect as DIFFERENT_VERSION duplicates
+        assertEquals(1, groups.size());
+        CodeProjectDuplicateGroup group = groups.get(0);
+        assertEquals(DuplicateType.DIFFERENT_VERSION, group.getDuplicateType());
+    }
+
+    @Test
+    void testDetectAllDuplicates_DifferentVersions_NPMScoped() {
+        // Given: Same NPM scoped package, different versions
+        CodeProject p1 = createProject("@scope/my-package:1.0.0", "hash123", 50);
+        CodeProject p2 = createProject("@scope/my-package:2.0.0", "hash456", 55);
+
+        when(repository.findAll()).thenReturn(List.of(p1, p2));
+
+        // When
+        List<CodeProjectDuplicateGroup> groups = service.detectAllDuplicates();
+
+        // Then: Should detect as DIFFERENT_VERSION duplicates
+        assertEquals(1, groups.size());
+        CodeProjectDuplicateGroup group = groups.get(0);
+        assertEquals(DuplicateType.DIFFERENT_VERSION, group.getDuplicateType());
+    }
+
+    @Test
+    void testDetectAllDuplicates_DifferentVersions_Gradle() {
+        // Given: Same Gradle project (group:name), different versions
+        CodeProject p1 = createProject("com.example:my-lib:1.0.0", "hash123", 75);
+        CodeProject p2 = createProject("com.example:my-lib:2.0.0", "hash456", 80);
+
+        when(repository.findAll()).thenReturn(List.of(p1, p2));
+
+        // When
+        List<CodeProjectDuplicateGroup> groups = service.detectAllDuplicates();
+
+        // Then: Should detect as DIFFERENT_VERSION duplicates
+        assertEquals(1, groups.size());
+        CodeProjectDuplicateGroup group = groups.get(0);
+        assertEquals(DuplicateType.DIFFERENT_VERSION, group.getDuplicateType());
+    }
+
+    @Test
+    void testDetectAllDuplicates_SameProject_DifferentContent() {
+        // Given: Same identifier (version), different content
+        CodeProject p1 = createProject("com.example:my-api:1.0.0", "hash123", 100);
+        CodeProject p2 = createProject("com.example:my-api:1.0.0", "hash456", 100);
+
+        when(repository.findAll()).thenReturn(List.of(p1, p2));
+
+        // When
+        List<CodeProjectDuplicateGroup> groups = service.detectAllDuplicates();
+
+        // Then: Should detect as SAME_PROJECT_DIFF_CONTENT
+        assertEquals(1, groups.size());
+        CodeProjectDuplicateGroup group = groups.get(0);
+        assertEquals(DuplicateType.SAME_PROJECT_DIFF_CONTENT, group.getDuplicateType());
+    }
+
+    @Test
+    void testDetectAllDuplicates_MultipleVersionsOfSameProject() {
+        // Given: Three versions of the same project
+        CodeProject v1 = createProject("com.example:api:1.0.0", "hash1", 100);
+        CodeProject v2 = createProject("com.example:api:2.0.0", "hash2", 105);
+        CodeProject v3 = createProject("com.example:api:3.0.0", "hash3", 110);
+
+        when(repository.findAll()).thenReturn(List.of(v1, v2, v3));
+
+        // When
+        List<CodeProjectDuplicateGroup> groups = service.detectAllDuplicates();
+
+        // Then: Should create one group with all three versions
+        assertEquals(1, groups.size());
+        CodeProjectDuplicateGroup group = groups.get(0);
+        assertEquals(DuplicateType.DIFFERENT_VERSION, group.getDuplicateType());
+        assertEquals(3, group.getMembers().size());
+    }
+
+    @Test
+    void testDetectAllDuplicates_DifferentProjectsSameGroupId() {
+        // Given: Different Maven projects from same group (different artifactId)
+        CodeProject p1 = createProject("com.example:api:1.0.0", "hash123", 100);
+        CodeProject p2 = createProject("com.example:web:1.0.0", "hash456", 150);
+
+        when(repository.findAll()).thenReturn(List.of(p1, p2));
+
+        // When
+        List<CodeProjectDuplicateGroup> groups = service.detectAllDuplicates();
+
+        // Then: Should NOT be detected as duplicates (different artifactId)
+        assertEquals(0, groups.size());
+    }
+
     private CodeProject createProject(String identifier, String contentHash, int fileCount) {
         return CodeProject.builder()
             .id(UUID.randomUUID())

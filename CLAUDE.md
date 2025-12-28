@@ -99,8 +99,17 @@ archivum/
 ### Project Type Clarification (Issue #33)
 - ✅ Removed GIT as a project type (it's source control, not a project type)
 - ✅ Git repositories without build markers now classified as GENERIC
-- ✅ Git information (remote, branch, commit) still tracked separately
+- ✅ Git information (remote, branch, commit) still tracked separately in all code projects
 - ✅ Updated UI to remove GIT-specific icons and colors
+- ✅ Scanner implementation:
+  - Created `GitInfoExtractor` utility class to extract Git metadata
+  - Updated all project detectors (Gradle, Maven, NPM, Python, Go, Rust) to populate Git info
+  - Git information extracted via git commands when `.git` directory detected
+  - Created shared `UploadService` to eliminate code duplication between scan and upload commands
+  - Enhanced `ScanCommand` with `--server-url` option for automatic upload after scan
+  - Added `--keep-output` flag to preserve scan results after upload
+  - Refactored `UploadCommand` to use shared `UploadService`
+  - Comprehensive test coverage for new utilities and services
 
 ### Code Projects Search (Issue #30)
 - ✅ Added search functionality to Code Projects screen

@@ -3,6 +3,7 @@ package tech.zaisys.archivum.scanner.service;
 import lombok.extern.slf4j.Slf4j;
 import tech.zaisys.archivum.api.dto.ProjectIdentityDto;
 import tech.zaisys.archivum.api.enums.ProjectType;
+import tech.zaisys.archivum.scanner.util.GitInfoExtractor;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -40,11 +41,20 @@ public class GoProjectDetector implements ProjectDetector {
             if (matcher.find()) {
                 String modulePath = matcher.group(1);
 
-                ProjectIdentityDto identity = ProjectIdentityDto.builder()
+                // Build base identity
+                ProjectIdentityDto.ProjectIdentityDtoBuilder builder = ProjectIdentityDto.builder()
                     .type(ProjectType.GO)
                     .name(modulePath)
-                    .identifier(modulePath) // For Go, module path is the identifier
-                    .build();
+                    .identifier(modulePath); // For Go, module path is the identifier
+
+                // Add Git information if available
+                GitInfoExtractor.extractGitInfo(folder).ifPresent(gitInfo -> {
+                    builder.gitRemote(gitInfo.getRemote());
+                    builder.gitBranch(gitInfo.getBranch());
+                    builder.gitCommit(gitInfo.getCommit());
+                });
+
+                ProjectIdentityDto identity = builder.build();
 
                 log.debug("Detected Go module: {}", modulePath);
                 return Optional.of(identity);

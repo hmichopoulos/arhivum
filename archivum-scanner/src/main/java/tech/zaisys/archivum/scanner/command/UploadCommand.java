@@ -1,28 +1,13 @@
 package tech.zaisys.archivum.scanner.command;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import lombok.extern.slf4j.Slf4j;
 import picocli.CommandLine.Command;
 import picocli.CommandLine.Option;
 import picocli.CommandLine.Parameters;
-import tech.zaisys.archivum.api.dto.*;
-import tech.zaisys.archivum.api.enums.ScanStatus;
+import tech.zaisys.archivum.scanner.service.UploadService;
 
-import java.io.IOException;
-import java.net.URI;
-import java.net.http.HttpClient;
-import java.net.http.HttpRequest;
-import java.net.http.HttpResponse;
-import java.nio.file.DirectoryStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.time.Duration;
-import java.time.Instant;
-import java.util.ArrayList;
-import java.util.Comparator;
-import java.util.List;
-import java.util.UUID;
 import java.util.concurrent.Callable;
 
 /**
@@ -63,14 +48,6 @@ public class UploadCommand implements Callable<Integer> {
     )
     private int timeoutSeconds;
 
-    private final ObjectMapper objectMapper = new ObjectMapper()
-        .registerModule(new JavaTimeModule());
-
-    private HttpClient httpClient;
-    private int uploadedBatches = 0;
-    private int totalBatches = 0;
-    private long uploadedFiles = 0;
-    private int uploadedProjects = 0;
     private long startTime;
 
     @Override
@@ -84,12 +61,9 @@ public class UploadCommand implements Callable<Integer> {
             }
 
             printHeader();
-            initializeHttpClient();
-
-            SourceDto source = readSourceJson();
-            executeUpload(source);
-
+            executeUpload();
             printSummary();
+
             return 0;
 
         } catch (Exception e) {
@@ -99,31 +73,18 @@ public class UploadCommand implements Callable<Integer> {
         }
     }
 
-    private void initializeHttpClient() {
-        httpClient = HttpClient.newBuilder()
-            .connectTimeout(Duration.ofSeconds(timeoutSeconds))
-            .build();
-    }
+    private void executeUpload() throws Exception {
+        UploadService uploadService = new UploadService(serverUrl, timeoutSeconds);
+        UploadService.UploadResult result = uploadService.upload(outputDir);
 
-    private void executeUpload(SourceDto source) throws IOException, InterruptedException {
-        log.info("Source: {} ({})", source.getName(), source.getType());
-
-        UUID sourceId = createSource(source);
-        log.info("Created source on server with ID: {}", sourceId);
-
-        uploadBatchFiles(sourceId);
-        uploadCodeProjects(sourceId);
-        completeScan(sourceId, source);
-    }
-
-    private void uploadBatchFiles(UUID sourceId) throws IOException, InterruptedException {
-        List<Path> batchFiles = findBatchFiles();
-        totalBatches = batchFiles.size();
-        log.info("Found {} batch files to upload", totalBatches);
-
-        for (Path batchFile : batchFiles) {
-            uploadBatch(sourceId, batchFile);
-        }
+        System.out.println();
+        System.out.println("Upload Complete!");
+        System.out.println("================");
+        System.out.println("Source ID:         " + result.sourceId);
+        System.out.println("Batches uploaded:  " + result.uploadedBatches);
+        System.out.println("Files uploaded:    " + result.uploadedFiles);
+        System.out.println("Projects uploaded: " + result.uploadedProjects);
+        System.out.println("Duration:          " + formatDuration(System.currentTimeMillis() - startTime));
     }
 
     private void configureLogging() {
@@ -160,183 +121,10 @@ public class UploadCommand implements Callable<Integer> {
         System.out.println();
     }
 
-    private SourceDto readSourceJson() throws IOException {
-        Path sourceJson = outputDir.resolve("source.json");
-        return objectMapper.readValue(sourceJson.toFile(), SourceDto.class);
-    }
-
-    private List<Path> findBatchFiles() throws IOException {
-        List<Path> batchFiles = new ArrayList<>();
-        Path filesDir = outputDir.resolve("files");
-
-        if (!Files.exists(filesDir)) {
-            log.warn("No files directory found - empty scan?");
-            return batchFiles;
-        }
-
-        try (DirectoryStream<Path> stream = Files.newDirectoryStream(filesDir, "batch-*.json")) {
-            stream.forEach(batchFiles::add);
-        }
-
-        // Sort by batch number
-        batchFiles.sort(Comparator.comparing(path -> path.getFileName().toString()));
-
-        return batchFiles;
-    }
-
-    private UUID createSource(SourceDto source) throws IOException, InterruptedException {
-        String endpoint = serverUrl + "/api/sources";
-
-        String requestBody = objectMapper.writeValueAsString(source);
-
-        HttpRequest request = HttpRequest.newBuilder()
-            .uri(URI.create(endpoint))
-            .timeout(Duration.ofSeconds(timeoutSeconds))
-            .header("Content-Type", "application/json")
-            .POST(HttpRequest.BodyPublishers.ofString(requestBody))
-            .build();
-
-        HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
-
-        if (response.statusCode() != 201) {
-            throw new IOException("Failed to create source. Status: " + response.statusCode() +
-                ", Response: " + response.body());
-        }
-
-        SourceDto createdSource = objectMapper.readValue(response.body(), SourceDto.class);
-        return createdSource.getId();
-    }
-
-    private void uploadBatch(UUID sourceId, Path batchFile) throws IOException, InterruptedException {
-        FileBatchDto batch = objectMapper.readValue(batchFile.toFile(), FileBatchDto.class);
-
-        // Update source ID (original might be different)
-        batch.setSourceId(sourceId);
-
-        String endpoint = serverUrl + "/api/files/batch";
-        String requestBody = objectMapper.writeValueAsString(batch);
-
-        HttpRequest request = HttpRequest.newBuilder()
-            .uri(URI.create(endpoint))
-            .timeout(Duration.ofSeconds(timeoutSeconds))
-            .header("Content-Type", "application/json")
-            .POST(HttpRequest.BodyPublishers.ofString(requestBody))
-            .build();
-
-        HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
-
-        if (response.statusCode() != 201) {
-            throw new IOException("Failed to upload batch " + batch.getBatchNumber() +
-                ". Status: " + response.statusCode() + ", Response: " + response.body());
-        }
-
-        uploadedBatches++;
-        uploadedFiles += batch.getFiles().size();
-
-        System.out.printf("Uploaded batch %d/%d (%d files)%n",
-            uploadedBatches, totalBatches, batch.getFiles().size());
-
-        log.debug("Batch {} uploaded successfully: {} files",
-            batch.getBatchNumber(), batch.getFiles().size());
-    }
-
-    private void uploadCodeProjects(UUID sourceId) throws IOException, InterruptedException {
-        Path projectsFile = outputDir.resolve("code-projects.json");
-
-        if (!Files.exists(projectsFile)) {
-            log.debug("No code-projects.json found - skipping project upload");
-            return;
-        }
-
-        log.info("Uploading code projects...");
-
-        // Read projects from file
-        CodeProjectDto[] projectsArray = objectMapper.readValue(
-            projectsFile.toFile(),
-            CodeProjectDto[].class
-        );
-        List<CodeProjectDto> projects = List.of(projectsArray);
-
-        if (projects.isEmpty()) {
-            log.info("No code projects to upload");
-            return;
-        }
-
-        // Update source IDs (original might be different)
-        List<CodeProjectDto> updatedProjects = new ArrayList<>();
-        for (CodeProjectDto p : projects) {
-            updatedProjects.add(CodeProjectDto.builder()
-                .sourceId(sourceId)
-                .rootPath(p.getRootPath())
-                .identity(p.getIdentity())
-                .scannedAt(p.getScannedAt())
-                .sourceFileCount(p.getSourceFileCount())
-                .totalFileCount(p.getTotalFileCount())
-                .totalSizeBytes(p.getTotalSizeBytes())
-                .contentHash(p.getContentHash())
-                .build());
-        }
-
-        String endpoint = serverUrl + "/api/code-projects/bulk";
-        String requestBody = objectMapper.writeValueAsString(updatedProjects);
-
-        HttpRequest request = HttpRequest.newBuilder()
-            .uri(URI.create(endpoint))
-            .timeout(Duration.ofSeconds(timeoutSeconds))
-            .header("Content-Type", "application/json")
-            .POST(HttpRequest.BodyPublishers.ofString(requestBody))
-            .build();
-
-        HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
-
-        if (response.statusCode() != 201) {
-            throw new IOException("Failed to upload code projects. Status: " +
-                response.statusCode() + ", Response: " + response.body());
-        }
-
-        uploadedProjects = projects.size();
-        System.out.printf("Uploaded %d code project(s)%n", uploadedProjects);
-        log.info("Code projects uploaded successfully: {} projects", uploadedProjects);
-    }
-
-    private void completeScan(UUID sourceId, SourceDto source) throws IOException, InterruptedException {
-        String endpoint = serverUrl + "/api/sources/" + sourceId + "/complete";
-
-        CompleteScanRequest request = CompleteScanRequest.builder()
-            .totalFiles(source.getTotalFiles())
-            .totalSize(source.getTotalSize())
-            .success(true)
-            .build();
-
-        String requestBody = objectMapper.writeValueAsString(request);
-
-        HttpRequest httpRequest = HttpRequest.newBuilder()
-            .uri(URI.create(endpoint))
-            .timeout(Duration.ofSeconds(timeoutSeconds))
-            .header("Content-Type", "application/json")
-            .POST(HttpRequest.BodyPublishers.ofString(requestBody))
-            .build();
-
-        HttpResponse<String> response = httpClient.send(httpRequest, HttpResponse.BodyHandlers.ofString());
-
-        if (response.statusCode() != 200) {
-            throw new IOException("Failed to complete scan. Status: " + response.statusCode() +
-                ", Response: " + response.body());
-        }
-
-        log.info("Scan marked as complete on server");
-    }
-
     private void printSummary() {
         long duration = System.currentTimeMillis() - startTime;
-
         System.out.println();
-        System.out.println("Upload Complete!");
-        System.out.println("================");
-        System.out.println("Batches uploaded:  " + uploadedBatches);
-        System.out.println("Files uploaded:    " + uploadedFiles);
-        System.out.println("Projects uploaded: " + uploadedProjects);
-        System.out.println("Duration:          " + formatDuration(duration));
+        System.out.println("Total Duration: " + formatDuration(duration));
     }
 
     private String formatDuration(long millis) {

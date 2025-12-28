@@ -3,6 +3,7 @@ package tech.zaisys.archivum.scanner.service;
 import lombok.extern.slf4j.Slf4j;
 import tech.zaisys.archivum.api.dto.ProjectIdentityDto;
 import tech.zaisys.archivum.api.enums.ProjectType;
+import tech.zaisys.archivum.scanner.util.GitInfoExtractor;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -50,13 +51,22 @@ public class GradleProjectDetector implements ProjectDetector {
 
             String identifier = groupId + ":" + name + ":" + version;
 
-            ProjectIdentityDto identity = ProjectIdentityDto.builder()
+            // Build base identity
+            ProjectIdentityDto.ProjectIdentityDtoBuilder builder = ProjectIdentityDto.builder()
                 .type(ProjectType.GRADLE)
                 .name(name)
                 .version(version)
                 .groupId(groupId)
-                .identifier(identifier)
-                .build();
+                .identifier(identifier);
+
+            // Add Git information if available
+            GitInfoExtractor.extractGitInfo(folder).ifPresent(gitInfo -> {
+                builder.gitRemote(gitInfo.getRemote());
+                builder.gitBranch(gitInfo.getBranch());
+                builder.gitCommit(gitInfo.getCommit());
+            });
+
+            ProjectIdentityDto identity = builder.build();
 
             log.debug("Detected Gradle project: {}", identifier);
             return Optional.of(identity);

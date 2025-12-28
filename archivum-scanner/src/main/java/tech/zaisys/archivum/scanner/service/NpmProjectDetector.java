@@ -5,6 +5,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.extern.slf4j.Slf4j;
 import tech.zaisys.archivum.api.dto.ProjectIdentityDto;
 import tech.zaisys.archivum.api.enums.ProjectType;
+import tech.zaisys.archivum.scanner.util.GitInfoExtractor;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -45,12 +46,21 @@ public class NpmProjectDetector implements ProjectDetector {
 
             String identifier = name + ":" + version;
 
-            ProjectIdentityDto identity = ProjectIdentityDto.builder()
+            // Build base identity
+            ProjectIdentityDto.ProjectIdentityDtoBuilder builder = ProjectIdentityDto.builder()
                 .type(ProjectType.NPM)
                 .name(name)
                 .version(version)
-                .identifier(identifier)
-                .build();
+                .identifier(identifier);
+
+            // Add Git information if available
+            GitInfoExtractor.extractGitInfo(folder).ifPresent(gitInfo -> {
+                builder.gitRemote(gitInfo.getRemote());
+                builder.gitBranch(gitInfo.getBranch());
+                builder.gitCommit(gitInfo.getCommit());
+            });
+
+            ProjectIdentityDto identity = builder.build();
 
             log.debug("Detected NPM project: {}", identifier);
             return Optional.of(identity);

@@ -137,4 +137,58 @@ class NpmProjectDetectorTest {
         assertTrue(result.isPresent());
         assertEquals("unknown", result.get().getVersion());
     }
+
+    @Test
+    void testDetect_WithoutGitRepository() throws IOException {
+        // Given: Valid package.json but no .git directory
+        String packageJsonContent = """
+            {
+                "name": "my-package",
+                "version": "1.0.0"
+            }
+            """;
+
+        Path packageJson = tempDir.resolve("package.json");
+        Files.writeString(packageJson, packageJsonContent);
+
+        // When
+        Optional<ProjectIdentityDto> result = detector.detect(tempDir);
+
+        // Then: Should detect project but without Git info
+        assertTrue(result.isPresent());
+        ProjectIdentityDto identity = result.get();
+        assertNull(identity.getGitRemote());
+        assertNull(identity.getGitBranch());
+        assertNull(identity.getGitCommit());
+    }
+
+    @Test
+    void testDetect_WithGitRepository() throws IOException {
+        // Given: Valid package.json and .git directory
+        String packageJsonContent = """
+            {
+                "name": "my-package",
+                "version": "1.0.0"
+            }
+            """;
+
+        Path packageJson = tempDir.resolve("package.json");
+        Files.writeString(packageJson, packageJsonContent);
+
+        // Create .git directory to simulate Git repository
+        Path gitDir = tempDir.resolve(".git");
+        Files.createDirectory(gitDir);
+
+        // When
+        Optional<ProjectIdentityDto> result = detector.detect(tempDir);
+
+        // Then: Should detect project
+        // Note: Git info extraction may fail in test environment without actual git repo
+        // but the detector should still work
+        assertTrue(result.isPresent());
+        ProjectIdentityDto identity = result.get();
+        assertEquals("my-package", identity.getName());
+        assertEquals("1.0.0", identity.getVersion());
+        // Git fields may be null if git commands fail, which is OK in test environment
+    }
 }

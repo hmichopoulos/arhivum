@@ -3,6 +3,7 @@ package tech.zaisys.archivum.scanner.service;
 import lombok.extern.slf4j.Slf4j;
 import tech.zaisys.archivum.api.dto.ProjectIdentityDto;
 import tech.zaisys.archivum.api.enums.ProjectType;
+import tech.zaisys.archivum.scanner.util.GitInfoExtractor;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -47,12 +48,21 @@ public class RustProjectDetector implements ProjectDetector {
 
             String identifier = name.get() + ":" + version.orElse("unknown");
 
-            ProjectIdentityDto identity = ProjectIdentityDto.builder()
+            // Build base identity
+            ProjectIdentityDto.ProjectIdentityDtoBuilder builder = ProjectIdentityDto.builder()
                 .type(ProjectType.RUST)
                 .name(name.get())
                 .version(version.orElse("unknown"))
-                .identifier(identifier)
-                .build();
+                .identifier(identifier);
+
+            // Add Git information if available
+            GitInfoExtractor.extractGitInfo(folder).ifPresent(gitInfo -> {
+                builder.gitRemote(gitInfo.getRemote());
+                builder.gitBranch(gitInfo.getBranch());
+                builder.gitCommit(gitInfo.getCommit());
+            });
+
+            ProjectIdentityDto identity = builder.build();
 
             log.debug("Detected Rust project: {}", identifier);
             return Optional.of(identity);

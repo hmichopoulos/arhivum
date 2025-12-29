@@ -290,6 +290,33 @@ Files are categorized into zones that determine deduplication behavior:
 - When a folder's zone is changed FROM CODE to another zone, associated code projects are automatically filtered out from the Code Projects tab
 - Zone changes are stored in the `folder_zone` database table with `(source_id, folder_path)` as the composite key
 
+### Code Project Zones and Deduplication
+
+**Zone Classification:**
+- All code projects automatically have their folder zone set to CODE
+- This happens when:
+  1. Scanner detects a code project (Maven, Gradle, NPM, etc.)
+  2. User manually marks a folder as CODE zone
+  3. Migration V014 ensures existing projects have CODE zone
+
+**Duplicate Detection:**
+- Projects are matched by their base identifier (without version)
+- Maven: `groupId:artifactId` (strips :version)
+- Gradle: `group:name` (strips :version)
+- NPM: `name` or `@scope/name` (strips :version)
+- Python: `name` (strips :version)
+- Go: module path (no version in identifier)
+- Rust: `name` (strips :version)
+
+**Duplicate Types:**
+- EXACT: Same identifier AND same content hash (identical projects)
+- SAME_PROJECT_DIFF_CONTENT: Same identifier, different files (diverged)
+- DIFFERENT_VERSION: Same base identifier, different versions (e.g., 1.0.0 vs 2.0.0)
+
+**Deduplication Rules for CODE Zone:**
+- File-level dedup: NO (preserves project structure)
+- Folder-level dedup: YES (can identify duplicate projects)
+
 ### Software Roots
 
 For SOFTWARE zone, the system detects "root" folders that represent a complete software unit:

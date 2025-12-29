@@ -96,8 +96,9 @@ public class CodeProjectDuplicateDetectionService {
 
     /**
      * Check if two identifiers are similar (e.g., same project different version).
+     * Package-private for testing.
      */
-    private boolean isSimilarIdentifier(String id1, String id2) {
+    boolean isSimilarIdentifier(String id1, String id2) {
         // Extract base identifier without version
         String base1 = extractBaseIdentifier(id1);
         String base2 = extractBaseIdentifier(id2);
@@ -107,8 +108,9 @@ public class CodeProjectDuplicateDetectionService {
     /**
      * Extract base identifier (without version).
      * For "com.example:my-api:1.0.0" returns "com.example:my-api"
+     * Package-private for testing.
      */
-    private String extractBaseIdentifier(String identifier) {
+    String extractBaseIdentifier(String identifier) {
         int lastColon = identifier.lastIndexOf(':');
         if (lastColon > 0) {
             return identifier.substring(0, lastColon);

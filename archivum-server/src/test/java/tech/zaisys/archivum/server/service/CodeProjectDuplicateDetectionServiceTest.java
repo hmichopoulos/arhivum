@@ -275,6 +275,158 @@ class CodeProjectDuplicateDetectionServiceTest {
         assertEquals(0, groups.size());
     }
 
+    // ========== Identifier Extraction Tests ==========
+
+    @Test
+    void testExtractBaseIdentifier_Maven() {
+        // Given: Maven identifier with version
+        String identifier = "com.example:my-api:1.0.0";
+
+        // When: Extract base identifier (strip version)
+        String result = service.extractBaseIdentifier(identifier);
+
+        // Then: Should return groupId:artifactId without version
+        assertEquals("com.example:my-api", result);
+    }
+
+    @Test
+    void testExtractBaseIdentifier_Gradle() {
+        // Given: Gradle identifier with version
+        String identifier = "com.example:my-lib:2.0.0";
+
+        // When: Extract base identifier
+        String result = service.extractBaseIdentifier(identifier);
+
+        // Then: Should return group:name without version
+        assertEquals("com.example:my-lib", result);
+    }
+
+    @Test
+    void testExtractBaseIdentifier_NPM() {
+        // Given: NPM package identifier with version
+        String identifier = "my-package:1.0.0";
+
+        // When: Extract base identifier
+        String result = service.extractBaseIdentifier(identifier);
+
+        // Then: Should return package name without version
+        assertEquals("my-package", result);
+    }
+
+    @Test
+    void testExtractBaseIdentifier_NPMScoped() {
+        // Given: NPM scoped package identifier with version
+        String identifier = "@scope/package:1.0.0";
+
+        // When: Extract base identifier
+        String result = service.extractBaseIdentifier(identifier);
+
+        // Then: Should return scoped package name without version
+        assertEquals("@scope/package", result);
+    }
+
+    @Test
+    void testExtractBaseIdentifier_Python() {
+        // Given: Python package identifier with version
+        String identifier = "django:3.2.0";
+
+        // When: Extract base identifier
+        String result = service.extractBaseIdentifier(identifier);
+
+        // Then: Should return package name without version
+        assertEquals("django", result);
+    }
+
+    @Test
+    void testExtractBaseIdentifier_NoVersion() {
+        // Given: Identifier without version (e.g., Go module)
+        String identifier = "github.com/user/repo";
+
+        // When: Extract base identifier
+        String result = service.extractBaseIdentifier(identifier);
+
+        // Then: Should return the identifier as-is
+        assertEquals("github.com/user/repo", result);
+    }
+
+    @Test
+    void testIsSimilarIdentifier_DifferentVersions() {
+        // Given: Same project, different versions
+        String id1 = "com.example:api:1.0.0";
+        String id2 = "com.example:api:2.0.0";
+
+        // When: Check similarity
+        boolean result = service.isSimilarIdentifier(id1, id2);
+
+        // Then: Should be similar (same base identifier)
+        assertTrue(result);
+    }
+
+    @Test
+    void testIsSimilarIdentifier_SameVersion() {
+        // Given: Same project, same version (identical identifiers)
+        String id1 = "com.example:api:1.0.0";
+        String id2 = "com.example:api:1.0.0";
+
+        // When: Check similarity
+        boolean result = service.isSimilarIdentifier(id1, id2);
+
+        // Then: Should NOT be similar (they're identical, not similar)
+        assertFalse(result);
+    }
+
+    @Test
+    void testIsSimilarIdentifier_DifferentProjects() {
+        // Given: Different projects (different artifactId)
+        String id1 = "com.example:api:1.0.0";
+        String id2 = "com.example:web:1.0.0";
+
+        // When: Check similarity
+        boolean result = service.isSimilarIdentifier(id1, id2);
+
+        // Then: Should NOT be similar
+        assertFalse(result);
+    }
+
+    @Test
+    void testIsSimilarIdentifier_DifferentGroups() {
+        // Given: Different projects (different groupId and artifactId)
+        String id1 = "com.example:api:1.0.0";
+        String id2 = "org.other:service:1.0.0";
+
+        // When: Check similarity
+        boolean result = service.isSimilarIdentifier(id1, id2);
+
+        // Then: Should NOT be similar
+        assertFalse(result);
+    }
+
+    @Test
+    void testIsSimilarIdentifier_NPMDifferentVersions() {
+        // Given: NPM package, different versions
+        String id1 = "express:4.17.1";
+        String id2 = "express:4.18.0";
+
+        // When: Check similarity
+        boolean result = service.isSimilarIdentifier(id1, id2);
+
+        // Then: Should be similar
+        assertTrue(result);
+    }
+
+    @Test
+    void testIsSimilarIdentifier_NPMScopedDifferentVersions() {
+        // Given: NPM scoped package, different versions
+        String id1 = "@angular/core:12.0.0";
+        String id2 = "@angular/core:13.0.0";
+
+        // When: Check similarity
+        boolean result = service.isSimilarIdentifier(id1, id2);
+
+        // Then: Should be similar
+        assertTrue(result);
+    }
+
     private CodeProject createProject(String identifier, String contentHash, int fileCount) {
         return CodeProject.builder()
             .id(UUID.randomUUID())

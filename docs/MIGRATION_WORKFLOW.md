@@ -1510,6 +1510,245 @@ WAREHOUSE-005: Completed projects archives (4TB)
 
 ---
 
+### 13. Bi-directional Migration (NAS ↔ Warehouse)
+
+**Question**: Can files be moved between NAS and Warehouse after initial migration?
+
+**User requirement**: Don't know final space needs, want flexibility to move files between NAS and Warehouse as needs change.
+
+**Solution**: **Bi-directional migration support**
+
+---
+
+#### Use Case 1: NAS → Warehouse (Free NAS Space)
+
+**Scenario**: NAS getting full, need to move less-used files to warehouse
+
+**Workflow**:
+
+1. **Identify files to move**:
+   - Browse NAS in UI
+   - Sort by: Last accessed, Size, Age
+   - Filter by: Zone, File type
+   - Identify candidates (e.g., raw footage, old projects)
+
+2. **Select and plan**:
+   - Select folders: `/NAS/Archive/Private/Photos/Raw-Footage/` (10TB)
+   - Click: "Move to Warehouse"
+   - System generates plan:
+     - 10TB to move
+     - Suggests: 3 warehouse disks needed
+     - Shows organization
+
+3. **User provides warehouse disks**:
+   - Plug in 3 disks (existing warehouse or new)
+   - System shows: WAREHOUSE-011, WAREHOUSE-012, WAREHOUSE-013
+
+4. **Execute migration**:
+   - Copy files to warehouse disks
+   - Verify checksums
+   - Update database: Mark files as WAREHOUSED
+   - Delete from NAS (after verification)
+   - Update catalog: Files now on WAREHOUSE-011, etc.
+
+5. **Result**:
+   - 10TB freed on NAS
+   - Files accessible on warehouse disks
+   - Still searchable in system
+   - Can move back to NAS anytime
+
+**UI**:
+```
+┌─────────────────────────────────────────────────────────────┐
+│  NAS Browser - Move to Warehouse                            │
+├─────────────────────────────────────────────────────────────┤
+│                                                              │
+│  Selected: /Archive/Private/Photos/Raw-Footage/             │
+│  Size: 10.2 TB                                               │
+│  Files: 2,400                                                │
+│  Last accessed: > 6 months ago                               │
+│                                                              │
+│  ┌──────────────────────────────────────────────────────┐   │
+│  │ Warehouse Plan                                        │   │
+│  │                                                       │   │
+│  │ Warehouse disks needed: 3                            │   │
+│  │                                                       │   │
+│  │ WAREHOUSE-011: Raw-Footage 2020-2021 (4TB)           │   │
+│  │ WAREHOUSE-012: Raw-Footage 2022-2023 (4TB)           │   │
+│  │ WAREHOUSE-013: Raw-Footage 2024 (2.2TB)              │   │
+│  │                                                       │   │
+│  │ After migration:                                      │   │
+│  │ ├─ NAS free space: +10.2 TB                          │   │
+│  │ ├─ Files remain searchable                           │   │
+│  │ └─ Can move back to NAS anytime                      │   │
+│  └───────────────────────────────────────────────────────┘   │
+│                                                              │
+│  ☐ Delete from NAS after verification                       │
+│  ☐ Keep copy on NAS (archive both locations)                │
+│                                                              │
+│  [Cancel] [Review Plan] [Execute Migration]                 │
+└─────────────────────────────────────────────────────────────┘
+```
+
+---
+
+#### Use Case 2: Warehouse → NAS (Need Faster Access)
+
+**Scenario**: Files on warehouse disk now needed frequently
+
+**Workflow**:
+
+1. **Browse warehouse**:
+   - UI shows: Warehouse disks
+   - User selects: WAREHOUSE-005 (Completed Projects)
+   - Browse files on disk (virtual or plug in disk)
+
+2. **Select files to move**:
+   - Select: `/WAREHOUSE-005/Projects/ClientX-2023/` (500GB)
+   - Click: "Move to NAS"
+   - System suggests NAS destination: `/Archive/Work/ClientX/`
+
+3. **Execute migration**:
+   - User plugs in WAREHOUSE-005 (if not already)
+   - System copies to NAS
+   - Organizes in NAS structure
+   - Verifies checksums
+   - Updates database: Mark files as PINNED (on NAS)
+   - Option: Delete from warehouse or keep both
+
+4. **Result**:
+   - Files now on NAS (fast access)
+   - Space used on NAS: +500GB
+   - Warehouse disk freed (or kept as backup)
+
+**UI**:
+```
+┌─────────────────────────────────────────────────────────────┐
+│  Warehouse Browser - Move to NAS                            │
+├─────────────────────────────────────────────────────────────┤
+│                                                              │
+│  Source: WAREHOUSE-005 (Completed Projects)                 │
+│  Selected: Projects/ClientX-2023/                           │
+│  Size: 500 GB                                                │
+│                                                              │
+│  ┌──────────────────────────────────────────────────────┐   │
+│  │ Destination on NAS                                    │   │
+│  │                                                       │   │
+│  │ /Archive/Work/ClientX/2023/                          │   │
+│  │                                                       │   │
+│  │ [Change Destination]                                 │   │
+│  └───────────────────────────────────────────────────────┘   │
+│                                                              │
+│  After migration:                                            │
+│  ├─ Files on NAS: Fast access                               │
+│  ├─ NAS space used: +500 GB                                 │
+│  └─ Warehouse space freed: 500 GB (if deleted)              │
+│                                                              │
+│  Warehouse disk handling:                                    │
+│  ○ Delete from warehouse (free space)                       │
+│  ○ Keep on warehouse (backup copy)                          │
+│                                                              │
+│  [Cancel] [Execute Migration]                               │
+└─────────────────────────────────────────────────────────────┘
+```
+
+---
+
+#### Use Case 3: NAS ↔ Warehouse (Re-organization)
+
+**Scenario**: Wrong initial classification, files in wrong place
+
+**Workflow**:
+
+1. **Review access patterns**:
+   - UI shows: Files not accessed in 6+ months
+   - User reviews: "These should be on warehouse, not NAS"
+
+2. **Batch move**:
+   - Select multiple folders
+   - Bulk action: "Move to Warehouse"
+   - System consolidates to warehouse disks
+
+3. **Vice versa**:
+   - Review warehouse disks
+   - Find frequently accessed files
+   - Move back to NAS
+
+**Result**: Files in right location based on actual usage
+
+---
+
+#### Database Tracking
+
+**File location history**:
+```sql
+CREATE TABLE file_migration_history (
+  id UUID PRIMARY KEY,
+  file_id UUID REFERENCES scanned_file(id),
+  from_location VARCHAR(500),
+  to_location VARCHAR(500),
+  migration_type VARCHAR(50), -- NAS_TO_WAREHOUSE, WAREHOUSE_TO_NAS
+  migrated_at TIMESTAMP,
+  migrated_by VARCHAR(100)
+);
+```
+
+**Current state**:
+- File state: PINNED (on NAS) or WAREHOUSED (on disk)
+- Location: NAS path or warehouse disk + path
+- Can query: "Show all files moved to warehouse in last month"
+
+---
+
+#### Benefits
+
+✅ **Flexibility**: Adjust as needs change
+✅ **Space management**: Move files to free NAS space
+✅ **Access optimization**: Move frequently-used files to NAS
+✅ **No lock-in**: Not stuck with initial decisions
+✅ **Searchable**: Files findable regardless of location
+✅ **Audit trail**: Track all movements
+✅ **Reversible**: Can always move back
+
+---
+
+#### Settings
+
+```
+Migration Settings:
+├─ Allow NAS → Warehouse migration: [✓]
+├─ Allow Warehouse → NAS migration: [✓]
+├─ Default: Delete from source after migration: [✓]
+├─ Option: Keep copy in both locations: [✓]
+└─ Require verification before deletion: [✓]
+```
+
+---
+
+#### Important Considerations
+
+**1. Duplicates handling**:
+- If file exists in both locations, system detects
+- Options: Keep both (backup), Delete duplicate, Replace
+
+**2. Organization preservation**:
+- When moving to NAS: Respect NAS folder structure
+- When moving to warehouse: Organize by category/date
+
+**3. Incremental moves**:
+- Don't need to move everything at once
+- Move folders as needed
+- System tracks everything
+
+**4. Search across locations**:
+- Search finds files on NAS and warehouse
+- Shows current location
+- Can filter by: On NAS, On Warehouse, Both
+
+**Recommendation**: Essential feature - implement early for maximum flexibility
+
+---
+
 ## Next Steps
 
 1. **Review this document**

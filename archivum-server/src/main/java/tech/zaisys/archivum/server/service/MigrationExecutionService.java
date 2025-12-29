@@ -162,8 +162,22 @@ public class MigrationExecutionService {
 
         log.debug("Checksum verified: {}", copiedHash);
 
-        // Update file state
-        file.setState(FileState.MIGRATED);
+        // Update file state based on destination type
+        MigrationPlan plan = planRepository.findById(task.getPlanId())
+            .orElseThrow(() -> new IllegalArgumentException("Plan not found"));
+
+        FileState newState;
+        MigrationType migrationType;
+
+        if ("WAREHOUSE".equals(plan.getDestinationType())) {
+            newState = FileState.WAREHOUSED;
+            migrationType = MigrationType.WAREHOUSE_COPY;
+        } else {
+            newState = FileState.MIGRATED;
+            migrationType = MigrationType.NAS_COPY;
+        }
+
+        file.setState(newState);
         file.setMigratedPath(destPath.toString());
         fileRepository.save(file);
 
@@ -172,7 +186,7 @@ public class MigrationExecutionService {
             .fileId(file.getId())
             .fromLocation(sourcePath.toString())
             .toLocation(destPath.toString())
-            .migrationType(MigrationType.NAS_COPY)
+            .migrationType(migrationType)
             .migratedAt(Instant.now())
             .build();
 

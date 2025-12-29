@@ -10,10 +10,12 @@ import tech.zaisys.archivum.api.dto.FileBatchDto;
 import tech.zaisys.archivum.api.dto.PhysicalId;
 import tech.zaisys.archivum.api.dto.SourceDto;
 import tech.zaisys.archivum.api.enums.ScanStatus;
+import tech.zaisys.archivum.api.enums.SourceScanType;
 import tech.zaisys.archivum.api.enums.SourceType;
 import tech.zaisys.archivum.scanner.config.ConfigLoader;
 import tech.zaisys.archivum.scanner.config.ScannerConfig;
 import tech.zaisys.archivum.scanner.service.*;
+import tech.zaisys.archivum.scanner.util.DiskInfoUtil;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -96,6 +98,12 @@ public class ScanCommand implements Callable<Integer> {
         defaultValue = "60"
     )
     private int uploadTimeout;
+
+    @Option(
+        names = {"--source-type"},
+        description = "Source scan type: DISCOVERY (default), DESTINATION (already organized), WAREHOUSE (consolidate to warehouse disks)"
+    )
+    private SourceScanType sourceType;
 
     @Override
     public Integer call() throws Exception {
@@ -591,6 +599,13 @@ public class ScanCommand implements Callable<Integer> {
      * Create a SourceDto for this scan.
      */
     private SourceDto createSource(String name, PhysicalId physicalId) {
+        // Get disk tracking information
+        String diskSerial = DiskInfoUtil.getDiskSerial(scanPath);
+        String mountPoint = DiskInfoUtil.getMountPoint(scanPath);
+
+        // Default source type to DISCOVERY if not specified
+        SourceScanType scanType = sourceType != null ? sourceType : SourceScanType.DISCOVERY;
+
         return SourceDto.builder()
             .id(UUID.randomUUID())
             .name(name)
@@ -604,6 +619,11 @@ public class ScanCommand implements Callable<Integer> {
             .processedSize(0L)
             .scanStartedAt(Instant.now())
             .postponed(false)
+            .serialNumber(diskSerial)
+            .diskState("ONLINE")
+            .mountPoint(mountPoint)
+            .lastSeen(Instant.now())
+            .sourceScanType(scanType)
             .build();
     }
 

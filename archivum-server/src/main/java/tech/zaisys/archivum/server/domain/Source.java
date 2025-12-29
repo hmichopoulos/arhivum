@@ -9,6 +9,7 @@ import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
 import tech.zaisys.archivum.api.dto.PhysicalId;
 import tech.zaisys.archivum.api.enums.ScanStatus;
+import tech.zaisys.archivum.api.enums.SourceScanType;
 import tech.zaisys.archivum.api.enums.SourceType;
 
 import java.time.Instant;
@@ -89,6 +90,26 @@ public class Source {
 
     @Column(columnDefinition = "TEXT")
     private String notes;
+
+    // Disk tracking fields for offline workflow support
+
+    @Column(name = "serial_number")
+    private String serialNumber;
+
+    @Column(name = "state", length = 20)
+    @Builder.Default
+    private String diskState = "OFFLINE"; // ONLINE or OFFLINE
+
+    @Column(name = "mount_point", length = 500)
+    private String mountPoint;
+
+    @Column(name = "last_seen")
+    private Instant lastSeen;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "source_type")
+    @Builder.Default
+    private SourceScanType sourceScanType = SourceScanType.DISCOVERY;
 
     /**
      * Add a child source to this source.

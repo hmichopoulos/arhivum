@@ -6,6 +6,7 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import tech.zaisys.archivum.api.enums.ScanStatus;
+import tech.zaisys.archivum.api.enums.SourceScanType;
 import tech.zaisys.archivum.api.enums.SourceType;
 
 import java.time.Instant;
@@ -106,4 +107,31 @@ public class SourceDto {
      * User notes about this source
      */
     private String notes;
+
+    // Disk tracking fields
+
+    /**
+     * Hardware serial number from disk
+     */
+    private String serialNumber;
+
+    /**
+     * Disk state: ONLINE or OFFLINE
+     */
+    private String diskState;
+
+    /**
+     * Current mount point (e.g., /mnt/disk1) or null if offline
+     */
+    private String mountPoint;
+
+    /**
+     * Timestamp when disk was last detected
+     */
+    private Instant lastSeen;
+
+    /**
+     * Source scan type (DISCOVERY, DESTINATION, WAREHOUSE)
+     */
+    private SourceScanType sourceScanType;
 }

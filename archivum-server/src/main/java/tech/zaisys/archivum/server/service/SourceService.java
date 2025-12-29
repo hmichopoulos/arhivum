@@ -48,6 +48,11 @@ public class SourceService {
             .totalSize(0L)
             .processedFiles(0L)
             .processedSize(0L)
+            .serialNumber(request.getSerialNumber())
+            .diskState(request.getDiskState())
+            .mountPoint(request.getMountPoint())
+            .lastSeen(request.getLastSeen())
+            .sourceScanType(request.getSourceScanType())
             .build();
 
         // Set parent if specified
@@ -209,6 +214,11 @@ public class SourceService {
             .scanCompletedAt(source.getScanCompletedAt())
             .createdAt(source.getCreatedAt())
             .notes(source.getNotes())
+            .serialNumber(source.getSerialNumber())
+            .diskState(source.getDiskState())
+            .mountPoint(source.getMountPoint())
+            .lastSeen(source.getLastSeen())
+            .sourceScanType(source.getSourceScanType())
             .build();
     }
 }

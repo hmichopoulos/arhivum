@@ -8,6 +8,7 @@ import lombok.NoArgsConstructor;
 import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
 import tech.zaisys.archivum.api.dto.ExifMetadata;
+import tech.zaisys.archivum.api.enums.FileState;
 import tech.zaisys.archivum.api.enums.FileStatus;
 import tech.zaisys.archivum.api.enums.Zone;
 
@@ -85,6 +86,20 @@ public class ScannedFile {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "original_file_id")
     private ScannedFile originalFile;
+
+    // Migration workflow fields
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "state")
+    @Builder.Default
+    private FileState state = FileState.DISCOVERED;
+
+    @Column(name = "migrated_path", length = 1000)
+    private String migratedPath;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "duplicate_of")
+    private ScannedFile duplicateOf;
 
     // Timestamps
     @Column(name = "scanned_at", nullable = false)

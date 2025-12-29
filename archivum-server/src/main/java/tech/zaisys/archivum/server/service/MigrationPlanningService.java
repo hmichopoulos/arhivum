@@ -4,6 +4,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import tech.zaisys.archivum.api.enums.FileState;
 import tech.zaisys.archivum.api.enums.MigrationStatus;
 import tech.zaisys.archivum.api.enums.MigrationTaskStatus;
 import tech.zaisys.archivum.api.enums.Zone;
@@ -17,7 +18,9 @@ import tech.zaisys.archivum.server.repository.ScannedFileRepository;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.time.Instant;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 /**
@@ -70,26 +73,61 @@ public class MigrationPlanningService {
 
         plan = planRepository.save(plan);
 
-        // Create tasks for each file
+        // Create tasks for each file, checking for duplicates against PINNED files
+        List<MigrationTask> tasks = new ArrayList<>();
+        int skippedCount = 0;
+
         for (ScannedFile file : files) {
             MigrationTask task = createTask(plan, file, destinationBasePath);
-            taskRepository.save(task);
+
+            if (task != null) {
+                tasks.add(task);
+            } else {
+                skippedCount++;
+            }
         }
 
-        log.info("Created migration plan {} with {} tasks", plan.getId(), files.size());
+        if (!tasks.isEmpty()) {
+            taskRepository.saveAll(tasks);
+        }
+
+        log.info("Created migration plan {} with {} tasks ({} files skipped as duplicates)",
+            plan.getId(), tasks.size(), skippedCount);
 
         return plan;
     }
 
     /**
      * Create a migration task for a file.
+     * Returns null if file is already in archive (duplicate of PINNED file).
      *
      * @param plan Migration plan
      * @param file File to migrate
      * @param destinationBasePath Base destination path
-     * @return Created migration task
+     * @return Created migration task, or null if file should be skipped
      */
     private MigrationTask createTask(MigrationPlan plan, ScannedFile file, String destinationBasePath) {
+        // Check if file already exists in PINNED location (already in archive)
+        Optional<ScannedFile> pinnedFile = fileRepository.findFirstBySha256AndState(
+            file.getSha256(),
+            FileState.PINNED
+        );
+
+        if (pinnedFile.isPresent()) {
+            // File already exists in archive, skip migration
+            ScannedFile existingFile = pinnedFile.get();
+
+            log.info("File {} already exists at {} (PINNED), skipping migration",
+                file.getPath(), existingFile.getPath());
+
+            // Mark the source file as duplicate
+            file.setDuplicateOf(existingFile);
+            fileRepository.save(file);
+
+            // Don't create a migration task
+            return null;
+        }
+
         // Determine destination path based on file zone and organization rules
         String destinationPath = determineDestinationPath(file, destinationBasePath);
 

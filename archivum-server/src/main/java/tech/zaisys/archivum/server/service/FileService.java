@@ -10,6 +10,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import tech.zaisys.archivum.api.dto.FileBatchDto;
 import tech.zaisys.archivum.api.dto.FileDto;
+import tech.zaisys.archivum.api.enums.FileState;
+import tech.zaisys.archivum.api.enums.SourceScanType;
 import tech.zaisys.archivum.api.enums.Zone;
 import tech.zaisys.archivum.server.domain.ScannedFile;
 import tech.zaisys.archivum.server.domain.Source;
@@ -63,6 +65,11 @@ public class FileService {
         for (FileDto fileDto : batch.getFiles()) {
             try {
                 ScannedFile entity = fileMapper.toEntity(fileDto, source);
+
+                // Set file state based on source scan type
+                FileState initialState = determineInitialFileState(source);
+                entity.setState(initialState);
+
                 ScannedFile saved = fileRepository.save(entity);
                 successfulIds.add(saved.getId());
                 totalSize += fileDto.getSize();
@@ -95,6 +102,27 @@ public class FileService {
             batch.getBatchNumber(), successCount, failureCount);
 
         return result;
+    }
+
+    /**
+     * Determine initial file state based on source scan type.
+     *
+     * @param source Source being scanned
+     * @return Initial file state
+     */
+    private FileState determineInitialFileState(Source source) {
+        SourceScanType scanType = source.getSourceScanType();
+
+        if (scanType == null) {
+            // Default to DISCOVERED if not specified
+            return FileState.DISCOVERED;
+        }
+
+        return switch (scanType) {
+            case DESTINATION -> FileState.PINNED;     // Already in final location
+            case WAREHOUSE -> FileState.WAREHOUSED;   // On warehouse disk
+            case DISCOVERY -> FileState.DISCOVERED;   // Default - needs migration
+        };
     }
 
     /**

@@ -8,6 +8,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 import org.springframework.transaction.annotation.Transactional;
+import tech.zaisys.archivum.api.enums.FileState;
 import tech.zaisys.archivum.api.enums.FileStatus;
 import tech.zaisys.archivum.server.domain.ScannedFile;
 
@@ -76,6 +77,16 @@ public interface ScannedFileRepository extends JpaRepository<ScannedFile, UUID> 
     @Query("SELECT f FROM ScannedFile f WHERE f.sha256 = :hash AND f.id != :excludeId")
     List<ScannedFile> findBySha256ExcludingId(@Param("hash") String hash,
                                                 @Param("excludeId") UUID excludeId);
+
+    /**
+     * Find a file by hash and state.
+     * Used for deduplication against PINNED files.
+     *
+     * @param sha256 SHA-256 hash
+     * @param state File state
+     * @return Optional file matching hash and state
+     */
+    Optional<ScannedFile> findFirstBySha256AndState(String sha256, FileState state);
 
     /**
      * Check if a hash already exists in the database.

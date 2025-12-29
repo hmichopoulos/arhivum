@@ -1749,6 +1749,378 @@ Migration Settings:
 
 ---
 
+### 14. Disk Tracking & Offline Workflow
+
+**Question**: How does system handle disks being unplugged during classification/planning?
+
+**User requirement**:
+- Scan disk, then unplug (need USB port for next disk)
+- Spend days/weeks classifying files in UI (disk offline)
+- When ready to migrate, plug disk back in
+- System detects disk and resumes migration
+
+**Problem**: Current design assumes disk stays plugged in throughout workflow
+
+**Solution**: **Disk state tracking with offline workflow support**
+
+---
+
+#### Disk Identification
+
+**System tracks each disk by**:
+
+1. **User-provided name**: "WD Blue 4TB", "Seagate Backup 2TB"
+2. **Hardware serial number**: Read from disk (e.g., "WXY12345678")
+3. **Database ID**: UUID for this source
+4. **Current state**: ONLINE (plugged in) or OFFLINE (unplugged)
+5. **Last mount point**: `/mnt/disk1` or null if unplugged
+6. **Last seen**: Timestamp when disk was last detected
+
+**Database schema**:
+```sql
+CREATE TABLE source (
+  id UUID PRIMARY KEY,
+  name VARCHAR(255),           -- "WD Blue 4TB"
+  serial_number VARCHAR(255),  -- Hardware serial (unique)
+  state VARCHAR(20),            -- ONLINE, OFFLINE
+  mount_point VARCHAR(500),    -- Current: /mnt/disk1 or null
+  last_seen TIMESTAMP,         -- Last detected
+  scanned_at TIMESTAMP,        -- When scan completed
+  ...
+);
+
+CREATE INDEX idx_source_serial ON source(serial_number);
+```
+
+---
+
+#### Realistic Workflow
+
+**Phase 1: Scanning (Disk Online)**
+
+```
+Day 1 Monday:
+1. User plugs "WD Blue 4TB" into USB port
+2. System detects disk, reads serial: "WXY12345"
+3. Scanner runs:
+   ./archivum-scanner scan --name "WD Blue 4TB" /mnt/disk1
+4. Scan completes (6 hours)
+5. Database:
+   - Source: "WD Blue 4TB" (serial: WXY12345)
+   - State: ONLINE
+   - Mount point: /mnt/disk1
+   - 850 files cataloged
+6. User unplugs disk (needs USB port)
+7. System detects: "WD Blue 4TB" offline
+8. Database updated:
+   - State: OFFLINE
+   - Mount point: null
+   - Last seen: 2025-12-29 18:00
+```
+
+**Phase 2: Classification (Disk Offline)**
+
+```
+Days 2-7 (Tuesday-Monday):
+1. User works in UI (disk unplugged)
+2. Reviews files from "WD Blue 4TB"
+3. Classifies: 500 files → NAS, 200 → Warehouse, 150 → Delete
+4. Plans migration
+5. Clicks "Execute Migration"
+6. System checks: "WD Blue 4TB" is OFFLINE
+7. Shows message:
+
+   ┌──────────────────────────────────────────────┐
+   │ ⚠️  Disk Required                             │
+   ├──────────────────────────────────────────────┤
+   │                                              │
+   │ To execute this migration, please plug in:  │
+   │                                              │
+   │ 📀 WD Blue 4TB                               │
+   │    (Serial: WXY12345)                        │
+   │    Last seen: 2025-12-29 18:00               │
+   │                                              │
+   │ Migration will start automatically when      │
+   │ disk is detected.                            │
+   │                                              │
+   │ [Cancel] [I've Plugged It In - Detect Now]  │
+   └──────────────────────────────────────────────┘
+```
+
+**Phase 3: Migration (Disk Back Online)**
+
+```
+Day 8 (Tuesday):
+1. User plugs "WD Blue 4TB" back into USB
+2. System detects disk:
+   - Reads serial: "WXY12345"
+   - Matches database: "WD Blue 4TB"
+   - Updates state: ONLINE
+   - Mount point: /mnt/disk2 (different port, doesn't matter)
+3. System shows notification:
+
+   ┌──────────────────────────────────────────────┐
+   │ ✓ Disk Detected                              │
+   ├──────────────────────────────────────────────┤
+   │                                              │
+   │ WD Blue 4TB is now online!                   │
+   │                                              │
+   │ Pending migrations:                          │
+   │ • 500 files → NAS (2.1 TB)                   │
+   │ • 200 files → Warehouse (800 GB)             │
+   │                                              │
+   │ [Start Migration Now] [Later]                │
+   └──────────────────────────────────────────────┘
+
+4. User clicks "Start Migration Now"
+5. Migration executes (uses current mount point: /mnt/disk2)
+6. When complete:
+   - Files migrated
+   - User can unplug disk again
+   - After 3 days: "Safe to format WD Blue 4TB"
+```
+
+---
+
+#### Multi-Disk Migrations
+
+**Scenario**: Migration requires multiple disks
+
+```
+Migration Plan:
+├─ Files from "WD Blue 4TB" → NAS
+├─ Files from "Seagate 2TB" → NAS
+└─ Files from both → WAREHOUSE-001 (destination)
+
+System checks:
+├─ WD Blue 4TB: ❌ OFFLINE (need to plug in)
+├─ Seagate 2TB: ❌ OFFLINE (need to plug in)
+└─ WAREHOUSE-001: ❌ OFFLINE (need to plug in)
+
+User sees:
+┌──────────────────────────────────────────────┐
+│ ⚠️  Multiple Disks Required                  │
+├──────────────────────────────────────────────┤
+│                                              │
+│ This migration requires:                     │
+│                                              │
+│ Source disks:                                │
+│ ❌ WD Blue 4TB (serial: WXY12345)            │
+│ ❌ Seagate 2TB (serial: ABC98765)            │
+│                                              │
+│ Destination disks:                           │
+│ ❌ WAREHOUSE-001 (serial: DEF55555)          │
+│                                              │
+│ Please plug in all disks, then click:        │
+│                                              │
+│ [Refresh - Check Disk Status]                │
+└──────────────────────────────────────────────┘
+
+User plugs in disks one by one:
+├─ Plugs WD Blue → System: "✓ WD Blue 4TB detected"
+├─ Plugs Seagate → System: "✓ Seagate 2TB detected"
+└─ Plugs WAREHOUSE-001 → System: "✓ All disks ready! Start migration?"
+
+Migration executes with all disks online.
+```
+
+---
+
+#### Disk Detection
+
+**How system detects disks**:
+
+1. **During scanning** (initial detection):
+   - Scanner reads disk serial number
+   - Stores in database with source record
+
+2. **When user plugs disk back in**:
+   - System monitors USB events (Linux: udev, macOS: diskutil)
+   - When new disk detected:
+     * Read serial number
+     * Query database: "SELECT * FROM source WHERE serial_number = ?"
+     * If match found: Update state to ONLINE, update mount point
+     * Show notification: "Disk X detected!"
+
+3. **Manual refresh**:
+   - User clicks "Refresh - Check Disk Status"
+   - System scans all mount points
+   - Reads serials, matches against database
+   - Updates states
+
+**Scanner enhancement**:
+```bash
+# Scanner reads and stores disk serial
+./archivum-scanner scan --name "WD Blue 4TB" /mnt/disk1
+
+Scanner output:
+- Detected disk serial: WXY12345
+- Stored in metadata: source.json
+- Uploaded to server with source record
+```
+
+---
+
+#### UI Features
+
+**Dashboard - Disk Status**:
+```
+┌─────────────────────────────────────────────────────────────┐
+│  Disk Status                                [Refresh]        │
+├─────────────────────────────────────────────────────────────┤
+│                                                              │
+│  ┌──────────────────────────────────────────────────────┐   │
+│  │ ✓ WD Blue 4TB (ONLINE)                               │   │
+│  │   Serial: WXY12345                                   │   │
+│  │   Mount: /mnt/disk2                                  │   │
+│  │   Last seen: Just now                                │   │
+│  │   Files: 850 (2.8 TB)                                │   │
+│  │   Status: Ready for migration                        │   │
+│  └──────────────────────────────────────────────────────┘   │
+│                                                              │
+│  ┌──────────────────────────────────────────────────────┐   │
+│  │ ⚠️  Seagate 2TB (OFFLINE)                             │   │
+│  │   Serial: ABC98765                                   │   │
+│  │   Last seen: 2025-12-27 14:30                        │   │
+│  │   Files: 1,200 (3.5 TB)                              │   │
+│  │   Status: ⚠️ Needed for pending migration            │   │
+│  │                                                       │   │
+│  │   [I Plugged It In - Detect Now]                     │   │
+│  └──────────────────────────────────────────────────────┘   │
+│                                                              │
+│  ┌──────────────────────────────────────────────────────┐   │
+│  │   WD Black 4TB (OFFLINE)                             │   │
+│  │   Serial: DEF11111                                   │   │
+│  │   Last seen: 2025-12-20 09:15                        │   │
+│  │   Files: 2,400 (5.8 TB)                              │   │
+│  │   Status: Classification in progress                 │   │
+│  └──────────────────────────────────────────────────────┘   │
+└─────────────────────────────────────────────────────────────┘
+```
+
+**Migration Queue - Disk Requirements**:
+```
+┌─────────────────────────────────────────────────────────────┐
+│  Migration Queue                                            │
+├─────────────────────────────────────────────────────────────┤
+│                                                              │
+│  ┌──────────────────────────────────────────────────────┐   │
+│  │ Migration #1: Documents to NAS                       │   │
+│  │                                                       │   │
+│  │ Source: WD Blue 4TB                                  │   │
+│  │ Files: 500 (2.1 TB)                                  │   │
+│  │ Destination: /NAS/Archive/Private/Documents/         │   │
+│  │                                                       │   │
+│  │ Status: ✓ Ready (disk online)                        │   │
+│  │                                                       │   │
+│  │ [Start Migration]                                    │   │
+│  └──────────────────────────────────────────────────────┘   │
+│                                                              │
+│  ┌──────────────────────────────────────────────────────┐   │
+│  │ Migration #2: Photos to NAS                          │   │
+│  │                                                       │   │
+│  │ Source: Seagate 2TB                                  │   │
+│  │ Files: 800 (3.2 TB)                                  │   │
+│  │ Destination: /NAS/Archive/Private/Photos/            │   │
+│  │                                                       │   │
+│  │ Status: ⚠️ Waiting for disk                          │   │
+│  │         Please plug in Seagate 2TB                   │   │
+│  │                                                       │   │
+│  │ [I've Plugged It In] [Skip for Now]                  │   │
+│  └──────────────────────────────────────────────────────┘   │
+└─────────────────────────────────────────────────────────────┘
+```
+
+---
+
+#### Benefits
+
+✅ **Flexible workflow**: Scan now, classify later, migrate when ready
+✅ **USB port management**: Don't need all disks plugged in at once
+✅ **Work at your own pace**: Days/weeks between scan and migration
+✅ **Clear requirements**: System tells you exactly which disks needed
+✅ **Auto-detection**: Plug disk in, system recognizes it automatically
+✅ **Multi-disk support**: Handle complex migrations requiring multiple disks
+✅ **Resume capability**: Unplug/replug doesn't lose progress
+
+---
+
+#### Edge Cases
+
+**1. User plugs wrong disk**:
+```
+System: "Detected disk XYZ99999"
+        "This disk is not needed for any pending migrations"
+        "Would you like to scan it?"
+```
+
+**2. Serial number not readable**:
+```
+System: "Could not read disk serial"
+        "Please identify this disk:"
+        ○ WD Blue 4TB
+        ○ Seagate 2TB
+        ○ New disk (scan now)
+```
+
+**3. Disk plugged into different port**:
+```
+Mount point changed: /mnt/disk1 → /mnt/disk3
+System: "No problem! Detected WD Blue 4TB at new location"
+        "Migration can proceed"
+```
+
+**4. Disk not seen for long time**:
+```
+UI warning: "⚠️ Seagate 2TB last seen 45 days ago"
+            "Migration waiting. Is disk lost?"
+            [Mark as Lost] [I Have It - Will Plug Soon]
+```
+
+---
+
+#### Implementation Notes
+
+**Scanner changes**:
+```bash
+# Read disk serial during scan
+lsblk -o SERIAL /dev/sda  # Linux
+diskutil info disk2 | grep Serial  # macOS
+
+# Store in source.json:
+{
+  "name": "WD Blue 4TB",
+  "serial": "WXY12345",
+  "mount_point": "/mnt/disk1",
+  ...
+}
+```
+
+**Server disk detection** (if disks plugged into server):
+```java
+@Scheduled(fixedDelay = 10000) // Every 10 seconds
+public void detectDisks() {
+    List<String> currentDisks = diskDetectionService.listConnectedDisks();
+
+    for (String serial : currentDisks) {
+        Optional<Source> source = sourceRepository.findBySerialNumber(serial);
+        if (source.isPresent() && source.get().getState() == DiskState.OFFLINE) {
+            // Disk plugged back in!
+            source.get().setState(DiskState.ONLINE);
+            source.get().setMountPoint(getMountPoint(serial));
+            source.get().setLastSeen(Instant.now());
+            sourceRepository.save(source.get());
+
+            notificationService.send("Disk " + source.get().getName() + " detected!");
+        }
+    }
+}
+```
+
+**Recommendation**: Critical feature for realistic workflow - implement early
+
+---
+
 ## Next Steps
 
 1. **Review this document**

@@ -1275,6 +1275,113 @@ Database tracks:
 
 ---
 
+### 11. Source File Deletion After Migration
+
+**Question**: When should source files be deleted after migration?
+
+**User requirement**: Delete originals 1-2 days after migration, AFTER NAS backup completes.
+
+**Solution**: **Time-based retention with backup verification**
+
+**Workflow**:
+1. Migrate files to NAS (copy + verify checksums)
+2. Mark as MIGRATED, but keep on source disk
+3. Wait X days (user configurable: 1-2 days)
+4. X days = X nightly NAS backups completed (safety margin)
+5. System marks: "Safe to delete"
+6. User verifies NAS backup (quick check)
+7. User confirms deletion
+8. System deletes from source disk
+
+**Settings**:
+```
+Retention Policy:
+├─ Keep migrated files on source: [2 days ▼]
+├─ Auto-delete after retention: [ ] (manual confirm)
+├─ Notify when ready to delete: [✓]
+└─ Deletion method: [Secure erase ▼]
+```
+
+**Timeline Example**:
+```
+Dec 27: Migrate 850 files → Marked MIGRATED, kept on source
+Dec 27 night: NAS backup #1
+Dec 28: Waiting (retention period)
+Dec 28 night: NAS backup #2
+Dec 29: "Ready to delete" → User confirms → Delete from source
+```
+
+**Benefits**:
+- ✅ Safety margin (2 backups before deletion)
+- ✅ User control (manual confirmation)
+- ✅ Audit trail (track what was deleted when)
+- ✅ Reversible (can cancel deletion)
+
+**Advanced**: Synology API integration
+- Query backup status via API
+- Auto-detect when file backed up
+- More accurate, but more complex
+
+**Recommendation**: Start with time-based, add API integration later
+
+---
+
+### 12. WAREHOUSE Strategy - Clarification
+
+**Question**: What is WAREHOUSE and when to use it?
+
+**Concept**: Catalog files that stay on external disks (cold storage)
+
+**Use case**: Not all 80TB needs to go to NAS. Some files are:
+- Old archives (backups from years ago)
+- Low-priority data (rarely accessed)
+- Bulk storage (raw footage, old projects)
+- Software archive (installers collected over years)
+
+**Problem**: Copying everything to NAS:
+- Expensive (limited NAS space)
+- Unnecessary (don't access most files)
+- Slow (takes weeks)
+
+**Solution**: WAREHOUSE
+- Scan disk: `--source-type WAREHOUSE`
+- System hashes all files
+- Stores metadata in database
+- **No copying to NAS**
+- Files stay on disk
+- Disk labeled and stored physically (e.g., "Shelf A, Box 2")
+
+**Later**:
+- Search: "project-backup-2012.zip"
+- System: "Found on disk WD-BLACK-001, Shelf A, Box 2"
+- User retrieves disk, plugs in, gets file
+
+**Example Split**:
+- 20TB "hot" data (important, frequent access) → Migrate to NAS
+- 60TB "cold" data (archives, rare access) → Warehouse on 15 labeled disks
+
+**Benefits**:
+- ✅ Saves NAS space (don't copy rarely-used files)
+- ✅ Still searchable (know where everything is)
+- ✅ Cheap storage (external HDDs as cold storage)
+- ✅ Organized (labeled, tracked)
+
+**When to use WAREHOUSE**:
+- Old backups (2010-2015 archives)
+- Completed projects (historical reference)
+- Raw media (before editing)
+- Software installers (large collection, rarely used)
+
+**When to use MIGRATION (to NAS)**:
+- Important documents
+- Photos/videos (active collection)
+- Current projects
+- Frequently accessed files
+
+**User decides**: Some users migrate everything (80TB to NAS), others split (20TB NAS + 60TB warehouse)
+
+---
+
 ## Next Steps
 
 1. **Review this document**

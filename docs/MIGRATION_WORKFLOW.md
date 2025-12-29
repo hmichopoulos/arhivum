@@ -33,6 +33,210 @@ Users have different needs for different types of files:
 
 ## Key Requirements
 
+### 0. Already-Organized Files (Baseline Scan)
+
+**Scenario**: User has already organized some files on NAS or other locations. System needs to:
+1. Avoid re-migrating these files
+2. Detect duplicates against already-organized files
+3. Preserve existing organization
+
+**Solution**: **Destination Scanning with Pinning**
+
+**Workflow**:
+
+1. **One-time setup**: User scans already-organized locations
+   ```bash
+   ./archivum-scanner scan \
+     --server-url http://server:8080 \
+     --name "NAS Archive (Existing)" \
+     --source-type DESTINATION \
+     /mnt/nas/Archive/
+   ```
+
+2. **System actions**:
+   - Computes hashes for all files
+   - Marks source type as: `DESTINATION`
+   - Marks all files as: `PINNED` (already in final location)
+   - Stores paths as canonical destinations
+
+3. **When scanning new disks**:
+   - System computes hash: `abc123...`
+   - Checks against PINNED files
+   - If match found:
+     - Shows: "✓ Already in archive at `/NAS/Archive/Private/Documents/2024/tax.pdf`"
+     - Suggests: "Safe to delete from source disk"
+     - Prevents re-migration
+
+4. **Benefits**:
+   - Avoids duplicate work (don't re-migrate what's already organized)
+   - Enables cleanup (know what's safe to delete from disks)
+   - Preserves existing organization
+   - Still enables deduplication
+
+**Source Types**:
+
+| Type | Purpose | Files State | Migration Behavior |
+|------|---------|-------------|-------------------|
+| **DISCOVERY** | Find files to migrate | DISCOVERED | Plan migration |
+| **DESTINATION** | Already organized | PINNED | Never migrate, use for dedup |
+| **WAREHOUSE** | Catalog only | WAREHOUSED | Stay on disk, searchable |
+
+**UI Flow**:
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│  Scan Source                                                │
+├─────────────────────────────────────────────────────────────┤
+│                                                              │
+│  Source Type:                                                │
+│                                                              │
+│  ○ Discovery (default)                                       │
+│    Scan external disk or cloud to find files to migrate     │
+│                                                              │
+│  ○ Destination                                               │
+│    Scan already-organized location (e.g., NAS Archive)       │
+│    Files will be PINNED (won't be migrated again)           │
+│                                                              │
+│  ○ Warehouse                                                 │
+│    Catalog files that will stay on this disk                │
+│                                                              │
+│  Path: [/mnt/nas/Archive/                               ]   │
+│  Name: [NAS Archive (Existing Organization)             ]   │
+│                                                              │
+│  [Cancel] [Start Scan]                                       │
+└─────────────────────────────────────────────────────────────┘
+```
+
+**Example Scenario**:
+
+**Setup**:
+```bash
+# Scan already-organized NAS folder
+./archivum-scanner scan \
+  --source-type DESTINATION \
+  --name "NAS Archive" \
+  /mnt/nas/Archive/
+
+# Result: 2M files hashed and PINNED
+# - /NAS/Archive/Private/haris/Documents/2024/taxes.pdf (hash: abc123)
+# - /NAS/Archive/Private/haris/Photos/2024/vacation.jpg (hash: def456)
+# - ...
+```
+
+**Discovery**:
+```bash
+# Scan external disk
+./archivum-scanner scan \
+  --source-type DISCOVERY \
+  --name "WD Blue 4TB" \
+  /mnt/disk1/
+
+# System finds:
+# - /mnt/disk1/old_stuff/taxes_2024.pdf (hash: abc123)
+#   → Matches PINNED file: /NAS/Archive/.../taxes.pdf
+#   → Show: "✓ Already in archive"
+#   → Suggest: "Safe to delete from WD Blue"
+#
+# - /mnt/disk1/photos/IMG_1234.jpg (hash: def456)
+#   → Matches PINNED file: /NAS/Archive/.../vacation.jpg
+#   → Show: "✓ Already in archive"
+#
+# - /mnt/disk1/new_doc.pdf (hash: xyz789)
+#   → No match
+#   → Show: "New file, needs migration"
+```
+
+**UI View**:
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│  Files on: WD Blue 4TB                                      │
+├─────────────────────────────────────────────────────────────┤
+│                                                              │
+│  Status Filter: [All ▼] [Already in Archive] [New]          │
+│                                                              │
+│  ┌──────────────────────────────────────────────────────┐   │
+│  │ ✓ old_stuff/taxes_2024.pdf                           │   │
+│  │   Status: Already in Archive                         │   │
+│  │   Location: /NAS/Archive/.../Documents/2024/taxes.pdf│   │
+│  │   Action: [Mark for Deletion] [Keep on Disk]         │   │
+│  └──────────────────────────────────────────────────────┘   │
+│                                                              │
+│  ┌──────────────────────────────────────────────────────┐   │
+│  │ ✓ photos/IMG_1234.jpg                                │   │
+│  │   Status: Already in Archive                         │   │
+│  │   Location: /NAS/Archive/.../Photos/2024/vacation.jpg│   │
+│  │   Action: [Mark for Deletion] [Keep on Disk]         │   │
+│  └──────────────────────────────────────────────────────┘   │
+│                                                              │
+│  ┌──────────────────────────────────────────────────────┐   │
+│  │   new_doc.pdf                                         │   │
+│  │   Status: New (needs migration)                       │   │
+│  │   Suggested: /NAS/Archive/.../Documents/2025/        │   │
+│  │   Action: [Plan Migration] [Ignore]                  │   │
+│  └──────────────────────────────────────────────────────┘   │
+│                                                              │
+│  Summary:                                                    │
+│  ├─ Already in Archive: 850 files (2.1 TB) ✓               │
+│  ├─ New files: 120 files (450 GB) → Need migration         │
+│  └─ Safe to delete: 850 files (if you trust archive)       │
+│                                                              │
+│  [Delete Already-Archived Files] [Plan Migration for New]   │
+└─────────────────────────────────────────────────────────────┘
+```
+
+**Database Schema Addition**:
+
+```sql
+-- Source types
+CREATE TYPE source_type AS ENUM (
+  'DISCOVERY',    -- Files to be migrated
+  'DESTINATION',  -- Already organized (pin files)
+  'WAREHOUSE'     -- Catalog only (files stay on disk)
+);
+
+ALTER TABLE source ADD COLUMN source_type source_type DEFAULT 'DISCOVERY';
+
+-- File states
+CREATE TYPE file_state AS ENUM (
+  'DISCOVERED',   -- Found during scan
+  'PINNED',       -- Already in final location (don't migrate)
+  'STAGED',       -- Ready to migrate
+  'MIGRATED',     -- Successfully migrated
+  'WAREHOUSED',   -- Cataloged, stays on disk
+  'DELETED'       -- Marked for deletion
+);
+
+ALTER TABLE scanned_file ADD COLUMN state file_state DEFAULT 'DISCOVERED';
+
+-- When source_type = DESTINATION, all files automatically get state = PINNED
+```
+
+**Migration Logic**:
+
+```java
+// When planning migration
+for (File file : filesToMigrate) {
+    // Check if file already exists in PINNED location
+    Optional<ScannedFile> pinnedVersion = findByHashAndState(
+        file.getContentHash(),
+        FileState.PINNED
+    );
+
+    if (pinnedVersion.isPresent()) {
+        // File already in archive
+        file.setState(FileState.ALREADY_IN_ARCHIVE);
+        file.setPinnedLocation(pinnedVersion.get().getPath());
+        // Don't add to migration plan
+    } else {
+        // New file, needs migration
+        addToMigrationPlan(file);
+    }
+}
+```
+
+---
+
 ### 1. Multiple Destinations
 
 Not everything goes to one place:

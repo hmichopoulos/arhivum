@@ -369,39 +369,80 @@ Users need control at:
 
 ---
 
-### Strategy 3: WAREHOUSE (Keep on External Disk)
+### Strategy 3: WAREHOUSE (Consolidate to External Disks)
 
-**Use case**: Catalog files that stay on external disks
+**Use case**: Consolidate cold-storage files from multiple messy disks to fewer, organized, labeled warehouse disks
+
+**Scenario**:
+- User has 20 disks with files scattered everywhere
+- System identifies 60TB of "cold" data (old archives, rarely accessed)
+- User wants to consolidate 60TB → organized warehouse disks
+- After deduplication: 60TB → 40TB (save space)
+- Result: 10 clean warehouse disks (labeled, organized)
+- Original 20 disks can be wiped and reused
 
 **User workflow**:
-1. User scans external disk "WD Black 4TB - Archives"
-2. System scans and catalogs
-3. User reviews files
-4. User decides: "Warehouse this disk"
-5. System prompts:
-   - "Assign disk label": User enters "WD-BLACK-001"
-   - "Physical location": User enters "Shelf A, Box 3"
-   - "Keep until": User enters "2030" or "Forever"
-6. System:
-   - Marks all files as WAREHOUSED
-   - Stores disk metadata
-   - Tracks file locations: "File X is on disk WD-BLACK-001"
-7. User physically labels disk and stores it
-8. User can later search: "Find family-photos-2015.zip"
-   - System shows: "On disk WD-BLACK-001, Shelf A, Box 3"
-9. User can plug disk back in to retrieve files
+
+1. **Scan all source disks** (DISCOVERY)
+   - System catalogs all files
+   - Identifies duplicates
+   - Classifies hot vs cold data
+
+2. **Decide split**:
+   - 20TB "hot" data → Migrate to NAS
+   - 60TB "cold" data → Migrate to Warehouse
+
+3. **System generates warehouse plan**:
+   - After dedup: 40TB needed
+   - Suggests: 10 warehouse disks × 4TB
+   - Shows organization:
+     - WAREHOUSE-001: Old backups 2010-2012 (4TB)
+     - WAREHOUSE-002: Old backups 2013-2015 (4TB)
+     - WAREHOUSE-003: Software installers archive (4TB)
+     - WAREHOUSE-004: Raw footage 2015-2018 (4TB)
+     - ... etc
+
+4. **User provides warehouse disks**:
+   - Plugs in 10 empty disks (or disks to be wiped)
+   - One at a time or multiple (if enough ports)
+
+5. **System executes warehouse migration**:
+   - Copies cold files to warehouse disks
+   - Organizes by category or date
+   - Deduplicates during copy
+   - Generates labels for each disk
+   - Catalogs all files in database
+
+6. **User labels disks physically**:
+   - Prints labels from system
+   - Affixes to each warehouse disk
+   - Stores in labeled location (Shelf A, Box 1-10)
+
+7. **Original source disks**:
+   - Wait 3 days for NAS backup
+   - Format and wipe
+   - Reuse or dispose
+
+8. **Later retrieval**:
+   - User searches: "project-backup-2012.zip"
+   - System shows: "On WAREHOUSE-001, Shelf A, Box 1"
+   - User retrieves disk, plugs in, gets file
 
 **System responsibilities**:
-- Catalog files
-- Track disk metadata
-- Search across warehoused files
-- Generate disk labels (printable)
+- Plan warehouse consolidation
+- Deduplicate during copy
+- Copy files to warehouse disks
+- Organize files logically
+- Generate printable labels
+- Catalog all files for search
+- Track physical locations
 
 **User responsibilities**:
-- Decide what to warehouse
-- Assign meaningful labels
-- Physically label and store disks
-- Track physical locations
+- Decide what goes to warehouse (vs NAS)
+- Provide warehouse disks
+- Print and affix labels
+- Store disks in labeled locations
+- Update system if disks moved
 
 ---
 
@@ -1275,54 +1316,121 @@ Database tracks:
 
 ---
 
-### 11. Source File Deletion After Migration
+### 11. Source Disk Cleanup After Migration
 
-**Question**: When should source files be deleted after migration?
+**Question**: How to clean up source disks after migration?
 
-**User requirement**: Delete originals 1-2 days after migration, AFTER NAS backup completes.
+**User requirement**:
+- Work disk-by-disk
+- Wait 3 days after migration (for NAS backups)
+- User gets email if backup fails
+- Format entire disk (don't selectively delete files)
+- Move to next disk
 
-**Solution**: **Time-based retention with backup verification**
+**Solution**: **Disk-level formatting with retention period**
 
-**Workflow**:
-1. Migrate files to NAS (copy + verify checksums)
-2. Mark as MIGRATED, but keep on source disk
-3. Wait X days (user configurable: 1-2 days)
-4. X days = X nightly NAS backups completed (safety margin)
-5. System marks: "Safe to delete"
-6. User verifies NAS backup (quick check)
-7. User confirms deletion
-8. System deletes from source disk
+**Workflow per disk**:
+1. Plug disk, scan, migrate all files
+2. Mark source as "Migration Complete"
+3. Wait 3 days (= 3 nightly NAS backups)
+4. User gets email if any backup fails
+5. Unless user clicks "Hold Cleanup", disk is safe to format
+6. User formats entire disk (wipe everything)
+7. Disk ready for reuse or storage
+8. Move to next disk
 
 **Settings**:
 ```
-Retention Policy:
-├─ Keep migrated files on source: [2 days ▼]
-├─ Auto-delete after retention: [ ] (manual confirm)
-├─ Notify when ready to delete: [✓]
-└─ Deletion method: [Secure erase ▼]
+Cleanup Policy:
+├─ Retention before format: [3 days ▼]
+├─ Email on backup failure: [✓] Enabled
+└─ Auto-notify when safe to format: [✓] Enabled
 ```
 
-**Timeline Example**:
+**Timeline Example (per disk)**:
 ```
-Dec 27: Migrate 850 files → Marked MIGRATED, kept on source
-Dec 27 night: NAS backup #1
-Dec 28: Waiting (retention period)
-Dec 28 night: NAS backup #2
-Dec 29: "Ready to delete" → User confirms → Delete from source
+Day 1 (Dec 27):
+- Plug "WD Blue 4TB"
+- Scan, migrate all files to NAS/Warehouse
+- Mark as "Complete"
+
+Night Dec 27: NAS backup #1
+Night Dec 28: NAS backup #2
+Night Dec 29: NAS backup #3
+
+Day 4 (Dec 30):
+- System shows: "WD Blue 4TB - Safe to format"
+- User formats disk
+- Disk wiped, ready for reuse
+
+Day 5 (Dec 31):
+- Plug next disk "Seagate 4TB"
+- Repeat process
+```
+
+**UI**:
+```
+┌─────────────────────────────────────────────────────────────┐
+│  Source Disks - Cleanup Status                              │
+├─────────────────────────────────────────────────────────────┤
+│                                                              │
+│  ┌──────────────────────────────────────────────────────┐   │
+│  │ ✓ WD Blue 4TB                                        │   │
+│  │   Migration completed: Dec 27, 2025                  │   │
+│  │   Files migrated: 850 (2.1 TB)                       │   │
+│  │   Status: ✓ Safe to format (3+ days elapsed)         │   │
+│  │   Last NAS backup: Dec 29, 02:00 ✓                   │   │
+│  │                                                       │   │
+│  │   [Mark as Formatted] [Format Now (if plugged)]      │   │
+│  └──────────────────────────────────────────────────────┘   │
+│                                                              │
+│  ┌──────────────────────────────────────────────────────┐   │
+│  │ ⏳ Seagate 4TB                                        │   │
+│  │   Migration completed: Dec 29, 2025                  │   │
+│  │   Files migrated: 1,200 (3.5 TB)                     │   │
+│  │   Status: ⏳ Wait 1 more day before formatting       │   │
+│  │   Safe to format after: Jan 1, 2026                  │   │
+│  │                                                       │   │
+│  │   [Hold Cleanup] [Override & Format Now]             │   │
+│  └──────────────────────────────────────────────────────┘   │
+│                                                              │
+│  ┌──────────────────────────────────────────────────────┐   │
+│  │ ⚠️  WD Black 4TB                                      │   │
+│  │   Migration completed: Dec 28, 2025                  │   │
+│  │   Files migrated: 2,400 (5.8 TB)                     │   │
+│  │   Status: ⚠️ CLEANUP ON HOLD (user action)           │   │
+│  │   Reason: Backup failed on Dec 29 (see email)        │   │
+│  │                                                       │   │
+│  │   [Resume Cleanup] [Format Anyway]                   │   │
+│  └──────────────────────────────────────────────────────┘   │
+│                                                              │
+│  Settings:                                                   │
+│  ├─ Retention before format: [3 days ▼]                     │
+│  ├─ Email on backup failure: [✓] Enabled                    │
+│  └─ Auto-hold on backup failure: [✓] Enabled                │
+└─────────────────────────────────────────────────────────────┘
 ```
 
 **Benefits**:
-- ✅ Safety margin (2 backups before deletion)
-- ✅ User control (manual confirmation)
-- ✅ Audit trail (track what was deleted when)
-- ✅ Reversible (can cancel deletion)
+- ✅ Simple (format entire disk, no selective deletion)
+- ✅ Fast (no need to plug disk back in to delete files)
+- ✅ Safe (3-day retention, 3 backups)
+- ✅ User control ("Hold Cleanup" if backup failed)
+- ✅ Clean slate for each disk
+- ✅ Work disk-by-disk at your own pace
 
-**Advanced**: Synology API integration
-- Query backup status via API
-- Auto-detect when file backed up
-- More accurate, but more complex
+**No need to**:
+- Plug disk back in
+- Selectively delete files
+- Track individual file deletion
+- Worry about missed files
 
-**Recommendation**: Start with time-based, add API integration later
+**Just**:
+- Wait 3 days
+- Format disk (when ready)
+- Done!
+
+**Recommendation**: Keep it simple - disk-level formatting after retention period
 
 ---
 
@@ -1330,55 +1438,75 @@ Dec 29: "Ready to delete" → User confirms → Delete from source
 
 **Question**: What is WAREHOUSE and when to use it?
 
-**Concept**: Catalog files that stay on external disks (cold storage)
+**CORRECTED Concept**: **Consolidate files TO organized warehouse disks** (not just catalog existing disks)
 
-**Use case**: Not all 80TB needs to go to NAS. Some files are:
-- Old archives (backups from years ago)
-- Low-priority data (rarely accessed)
-- Bulk storage (raw footage, old projects)
-- Software archive (installers collected over years)
+**Use case**: Consolidate scattered files from multiple messy disks to fewer, organized warehouse disks
 
-**Problem**: Copying everything to NAS:
-- Expensive (limited NAS space)
-- Unnecessary (don't access most files)
-- Slow (takes weeks)
+**Problem**: User has 20 disks with files scattered everywhere:
+- Duplicates across multiple disks
+- Poor organization
+- Want some files accessible but not on expensive NAS
 
-**Solution**: WAREHOUSE
-- Scan disk: `--source-type WAREHOUSE`
-- System hashes all files
-- Stores metadata in database
-- **No copying to NAS**
-- Files stay on disk
-- Disk labeled and stored physically (e.g., "Shelf A, Box 2")
+**Solution**: WAREHOUSE migration strategy
+1. **Scan all source disks** (DISCOVERY)
+2. **Classify**: 20TB hot (→ NAS), 60TB cold (→ Warehouse)
+3. **System plans warehouse consolidation**:
+   - After dedup: 60TB → 40TB (save space)
+   - Suggests: 10 warehouse disks × 4TB
+   - Organizes by category
+4. **User provides warehouse disks** (empty or to be wiped)
+5. **System executes**:
+   - Copies cold files to warehouse disks
+   - Deduplicates during copy
+   - Organizes logically
+   - Generates printable labels
+6. **Result**:
+   - 10 clean, labeled warehouse disks
+   - Cataloged, searchable
+   - Original 20 disks can be formatted and reused
 
-**Later**:
+**Later retrieval**:
 - Search: "project-backup-2012.zip"
-- System: "Found on disk WD-BLACK-001, Shelf A, Box 2"
+- System: "Found on WAREHOUSE-001, Shelf A, Box 1"
 - User retrieves disk, plugs in, gets file
 
-**Example Split**:
-- 20TB "hot" data (important, frequent access) → Migrate to NAS
-- 60TB "cold" data (archives, rare access) → Warehouse on 15 labeled disks
-
 **Benefits**:
-- ✅ Saves NAS space (don't copy rarely-used files)
-- ✅ Still searchable (know where everything is)
-- ✅ Cheap storage (external HDDs as cold storage)
-- ✅ Organized (labeled, tracked)
+- ✅ Consolidation (20 messy disks → 10 clean warehouse disks)
+- ✅ Deduplication (60TB → 40TB)
+- ✅ Organization (by category, labeled)
+- ✅ Searchable (cataloged in database)
+- ✅ Saves NAS space (cold data not on NAS)
+- ✅ Cheap storage (external HDDs)
+- ✅ Can reuse original disks (10 freed up)
+
+**Example warehouse organization**:
+```
+WAREHOUSE-001: Old backups 2010-2012 (4TB)
+WAREHOUSE-002: Old backups 2013-2015 (4TB)
+WAREHOUSE-003: Software installers archive (4TB)
+WAREHOUSE-004: Raw footage 2015-2018 (4TB)
+WAREHOUSE-005: Completed projects archives (4TB)
+... etc
+```
 
 **When to use WAREHOUSE**:
-- Old backups (2010-2015 archives)
+- Cold data (rarely accessed)
+- Old backups and archives
 - Completed projects (historical reference)
 - Raw media (before editing)
-- Software installers (large collection, rarely used)
+- Software installers (large collection)
+- Want organization without NAS cost
 
-**When to use MIGRATION (to NAS)**:
+**When to use NAS MIGRATION**:
+- Hot data (frequently accessed)
 - Important documents
-- Photos/videos (active collection)
+- Active photo/video collection
 - Current projects
-- Frequently accessed files
+- Need fast access
 
-**User decides**: Some users migrate everything (80TB to NAS), others split (20TB NAS + 60TB warehouse)
+**Key difference from original understanding**:
+- ❌ Old: Just catalog existing disks (files stay where they are)
+- ✅ New: **Consolidate and migrate** files TO organized warehouse disks (active migration strategy)
 
 ---
 

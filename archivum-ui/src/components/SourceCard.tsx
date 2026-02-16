@@ -8,9 +8,16 @@ import { ScanStatus, SourceType } from '../types/source';
 type SourceCardProps = {
   source: Source;
   onClick?: () => void;
+  onDelete?: (id: string) => void;
 };
 
-export function SourceCard({ source, onClick }: SourceCardProps) {
+export function SourceCard({ source, onClick, onDelete }: SourceCardProps) {
+  const handleDelete = (e: React.MouseEvent) => {
+    e.stopPropagation(); // Prevent card click
+    if (window.confirm(`Are you sure you want to delete source "${source.name}"?\n\nThis will delete the source and all ${source.totalFiles.toLocaleString()} associated files from the database.`)) {
+      onDelete?.(source.id);
+    }
+  };
   const formatBytes = (bytes: number): string => {
     if (bytes === 0) return '0 B';
     const k = 1024;
@@ -76,13 +83,37 @@ export function SourceCard({ source, onClick }: SourceCardProps) {
             <p className="text-sm text-gray-500">{source.rootPath}</p>
           </div>
         </div>
-        <span
-          className={`px-3 py-1 rounded-full text-xs font-medium ${getStatusColor(
-            source.status
-          )}`}
-        >
-          {source.status}
-        </span>
+        <div className="flex items-center gap-2">
+          <span
+            className={`px-3 py-1 rounded-full text-xs font-medium ${getStatusColor(
+              source.status
+            )}`}
+          >
+            {source.status}
+          </span>
+          {onDelete && (
+            <button
+              onClick={handleDelete}
+              className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-md transition-colors"
+              title="Delete source"
+            >
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                className="h-5 w-5"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                />
+              </svg>
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Physical ID Info */}

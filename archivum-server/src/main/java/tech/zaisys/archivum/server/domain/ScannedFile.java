@@ -41,7 +41,7 @@ public class ScannedFile {
     @Column(nullable = false)
     private String name;
 
-    @Column(length = 50)
+    @Column(length = 100)
     private String extension;
 
     // File properties
@@ -90,9 +90,13 @@ public class ScannedFile {
     // Migration workflow fields
 
     @Enumerated(EnumType.STRING)
-    @Column(name = "state")
+    @Column(name = "state", length = 20)
     @Builder.Default
     private FileState state = FileState.DISCOVERED;
+
+    @Column(name = "ignore_for_migration", nullable = false)
+    @Builder.Default
+    private Boolean ignoreForMigration = false;
 
     @Column(name = "migrated_path", length = 1000)
     private String migratedPath;

@@ -94,7 +94,33 @@ archivum/
 └── docker-compose.yml         # Deployment
 ```
 
-## Recent Updates (December 2025)
+## Recent Updates (December 2025 - January 2026)
+
+### Destination Management System (January 2026)
+- ✅ Complete destination management system for migration targets
+- ✅ Backend implementation:
+  - Created V018 database migration with `destination` table
+  - Destination types: NAS, WAREHOUSE, STAGING
+  - Support for mounted filesystem paths with physical hardware identifiers
+  - Real-time disk space monitoring using Java NIO FileStore API
+  - DestinationService with validation and real-time filesystem info enrichment
+  - DestinationController REST API (CRUD operations)
+  - Comprehensive test coverage (DestinationServiceTest, DestinationControllerTest)
+- ✅ Frontend implementation:
+  - TypeScript types and API client (destinations.ts)
+  - React Query hooks with 30-second auto-refresh for real-time updates
+  - DestinationCard component with disk usage visualization
+  - DestinationsListPage with filtering, search, and stats
+  - Navigation integration in Layout
+- ✅ Features:
+  - Real-time disk space monitoring (available, used, percentage)
+  - Visual disk usage indicators (color-coded progress bars)
+  - Active/inactive toggle for destinations
+  - Priority-based ordering
+  - Filter by type (NAS/WAREHOUSE/STAGING) and status
+  - Delete functionality with confirmation
+  - Physical hardware binding via identifiers
+- ✅ Important: Never use PostgreSQL ENUMs - always use VARCHAR with CHECK constraints
 
 ### Project Type Clarification (Issue #33)
 - ✅ Removed GIT as a project type (it's source control, not a project type)
@@ -180,6 +206,161 @@ archivum/
 ### General
 - Update the docs with the changes when done
 
+## Testing Requirements
+
+**CRITICAL**: All code changes MUST be covered by automated tests, and all tests MUST pass before deploying.
+
+### Why Testing Matters
+
+Trial-and-error development (making changes, deploying, seeing what breaks at runtime) is:
+- ❌ Inefficient and wastes time
+- ❌ Error-prone and leads to production issues
+- ❌ Creates technical debt
+- ❌ Breaks user trust
+
+Instead, we use **test-driven development**:
+- ✅ Write tests first or alongside code
+- ✅ Run tests before every deployment
+- ✅ Catch issues early in development
+- ✅ Document expected behavior
+- ✅ Enable confident refactoring
+
+### Test Coverage Requirements
+
+1. **Unit Tests** (Required for all code)
+   - Test business logic in isolation
+   - Mock external dependencies
+   - Fast execution (< 1 second per test)
+   - Location: `src/test/java/.../service/`, `src/test/java/.../controller/`
+   - Example: `FileServiceTest.java`, `SourceControllerTest.java`
+
+2. **Integration Tests** (Required for database interactions and critical flows)
+   - Test with real database (use Testcontainers)
+   - Verify schema can handle realistic data
+   - Test migration scripts
+   - Location: `src/test/java/.../integration/`
+   - Example: `FileIngestionIntegrationTest.java`
+
+3. **Repository Tests** (Required for custom queries)
+   - Test complex queries with real database
+   - Verify index usage
+   - Example: `ScannedFileRepositoryTest.java`
+
+### Before Every Deployment
+
+Run the full test suite:
+```bash
+./gradlew build
+```
+
+**All tests MUST pass**. If tests fail:
+1. Fix the failing tests first
+2. Do not deploy broken code
+3. Do not skip or disable tests to "deploy faster"
+
+### Writing Good Tests
+
+```java
+@Test
+void shouldIngestFileWithLongExtension() {
+    // Given - Setup test data
+    FileDto file = createFileWithExtension("component.spec.tsx.snapshot");
+
+    // When - Execute the operation
+    FileBatchResult result = fileService.ingestBatch(batch);
+
+    // Then - Verify expectations
+    assertThat(result.getSuccessCount()).isEqualTo(1);
+    assertThat(savedFile.getExtension()).hasLength(30);
+}
+```
+
+### Schema Changes
+
+When adding migrations:
+1. **Write the migration** (`V0XX__description.sql`)
+2. **Update the entity** (add/modify fields)
+3. **Write integration test** to verify:
+   - Migration runs successfully
+   - Schema can handle realistic data (long strings, all enum values, edge cases)
+   - Constraints work as expected
+4. **Run full test suite** before committing
+
+### Database Type Safety
+
+**Never use PostgreSQL-specific types that conflict with JPA**:
+- ❌ PostgreSQL ENUM types (cause type conversion errors)
+- ✅ VARCHAR with CHECK constraints instead
+- ✅ Standard SQL types (VARCHAR, INTEGER, TIMESTAMP, etc.)
+
+Example:
+```sql
+-- Bad: PostgreSQL enum
+CREATE TYPE my_type AS ENUM ('VALUE1', 'VALUE2');
+ALTER TABLE my_table ADD COLUMN my_field my_type;
+
+-- Good: VARCHAR with constraint
+ALTER TABLE my_table ADD COLUMN my_field VARCHAR(20);
+ALTER TABLE my_table ADD CONSTRAINT my_field_check
+  CHECK (my_field IN ('VALUE1', 'VALUE2'));
+```
+
+### Common Test Scenarios to Cover
+
+1. **Field Length Validation**
+   - Test maximum lengths (e.g., 100-char extensions)
+   - Test compound values (e.g., "component.spec.tsx.snapshot")
+
+2. **Enum Value Persistence**
+   - Test all enum values can be saved and retrieved
+   - Test enum-to-VARCHAR conversion works
+
+3. **Batch Operations**
+   - Test large batches (100+ items)
+   - Test partial failures
+   - Test transaction rollback
+
+4. **Edge Cases**
+   - Null values where allowed
+   - Empty strings
+   - Special characters
+   - Unicode
+
+### Integration Test Template
+
+```java
+@SpringBootTest
+@AutoConfigureMockMvc
+@Testcontainers
+@Transactional
+class MyFeatureIntegrationTest {
+
+    @Container
+    static PostgreSQLContainer<?> postgres =
+        new PostgreSQLContainer<>("postgres:16");
+
+    @DynamicPropertySource
+    static void configureProperties(DynamicPropertyRegistry registry) {
+        registry.add("spring.datasource.url", postgres::getJdbcUrl);
+        // ...
+    }
+
+    @Test
+    void shouldHandleRealisticData() {
+        // Test with real data that matches production scenarios
+    }
+}
+```
+
+### Summary
+
+- ✅ Write tests for all code changes
+- ✅ Run `./gradlew build` before every commit
+- ✅ Integration tests for database changes
+- ✅ All tests must pass before deployment
+- ❌ No trial-and-error development
+- ❌ No "deploy and see what breaks"
+- ❌ No PostgreSQL enums (use VARCHAR + CHECK)
 
 ### Java (Backend + Scanner)
 

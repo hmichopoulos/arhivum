@@ -4,7 +4,7 @@
 
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useSources, useSourceStats } from '../hooks/useSources';
+import { useSources, useSourceStats, useDeleteSource } from '../hooks/useSources';
 import { SourceCard } from '../components/SourceCard';
 import { ScanStatus, SourceType } from '../types/source';
 
@@ -12,10 +12,22 @@ export function SourcesListPage() {
   const navigate = useNavigate();
   const { data: sources, isLoading, error } = useSources();
   const { data: stats } = useSourceStats();
+  const deleteSource = useDeleteSource();
 
   const [filterStatus, setFilterStatus] = useState<ScanStatus | 'ALL'>('ALL');
   const [filterType, setFilterType] = useState<SourceType | 'ALL'>('ALL');
   const [searchTerm, setSearchTerm] = useState('');
+
+  const handleDelete = (sourceId: string) => {
+    deleteSource.mutate(sourceId, {
+      onSuccess: () => {
+        // Query will be automatically invalidated by the mutation hook
+      },
+      onError: (error) => {
+        alert(`Failed to delete source: ${error.message}`);
+      }
+    });
+  };
 
   // Filter sources
   const filteredSources = sources?.filter((source) => {
@@ -143,6 +155,7 @@ export function SourcesListPage() {
                 key={source.id}
                 source={source}
                 onClick={() => navigate(`/sources/${source.id}`)}
+                onDelete={handleDelete}
               />
             ))}
           </div>

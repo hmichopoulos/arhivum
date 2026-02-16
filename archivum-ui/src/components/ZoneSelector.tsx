@@ -5,7 +5,7 @@
 import { useState } from 'react';
 import { Zone, ZONE_LABELS, ZONE_COLORS } from '../types/zone';
 import { updateFileZone } from '../api/files';
-import { updateFolderZone } from '../api/sources';
+import { useUpdateFolderZone } from '../hooks/useSources';
 
 type ZoneSelectorProps = {
   // For files
@@ -22,7 +22,7 @@ type ZoneSelectorProps = {
 export function ZoneSelector({ fileId, sourceId, folderPath, currentZone, isInherited, onZoneChange }: ZoneSelectorProps) {
   const [isEditing, setIsEditing] = useState(false);
   const [selectedZone, setSelectedZone] = useState<Zone>(currentZone);
-  const [isLoading, setIsLoading] = useState(false);
+  const updateFolderZoneMutation = useUpdateFolderZone();
   const [error, setError] = useState<string | null>(null);
 
   const handleZoneClick = (e: React.MouseEvent) => {
@@ -35,32 +35,44 @@ export function ZoneSelector({ fileId, sourceId, folderPath, currentZone, isInhe
     const newZone = e.target.value as Zone;
     setSelectedZone(newZone);
     setError(null);
-    setIsLoading(true);
 
     try {
       if (fileId) {
         await updateFileZone(fileId, newZone);
+        setIsEditing(false);
+        onZoneChange?.(newZone);
       } else if (sourceId && folderPath) {
-        await updateFolderZone(sourceId, folderPath, newZone);
+        updateFolderZoneMutation.mutate(
+          { sourceId, folderPath, zone: newZone },
+          {
+            onSuccess: () => {
+              setIsEditing(false);
+              onZoneChange?.(newZone);
+            },
+            onError: (err) => {
+              console.error('Failed to update zone:', err);
+              setError('Failed to update zone');
+              setSelectedZone(currentZone); // Revert to original zone
+            }
+          }
+        );
       }
-      setIsEditing(false);
-      onZoneChange?.(newZone);
     } catch (err) {
       console.error('Failed to update zone:', err);
       setError('Failed to update zone');
       setSelectedZone(currentZone); // Revert to original zone
-    } finally {
-      setIsLoading(false);
     }
   };
 
   const handleBlur = () => {
-    if (!isLoading) {
+    if (!updateFolderZoneMutation.isPending) {
       setIsEditing(false);
       setSelectedZone(currentZone);
       setError(null);
     }
   };
+
+  const isLoading = updateFolderZoneMutation.isPending;
 
   if (isEditing) {
     return (

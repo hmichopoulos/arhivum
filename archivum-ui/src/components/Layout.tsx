@@ -13,7 +13,8 @@ export function Layout({ children }: LayoutProps) {
 
   const navItems = [
     { path: '/sources', label: 'Sources', icon: '💾' },
-    { path: '/code-projects', label: 'Code Projects', icon: '💻' }
+    { path: '/code-projects', label: 'Code Projects', icon: '💻' },
+    { path: '/destinations', label: 'Destinations', icon: '🗄️' }
   ];
 
   const isActive = (path: string) => {

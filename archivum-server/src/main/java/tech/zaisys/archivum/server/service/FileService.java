@@ -213,4 +213,112 @@ public class FileService {
 
         return fileMapper.toDto(saved);
     }
+
+    /**
+     * Mark a single file as ignored for migration.
+     * The file will be kept in DB for duplicate checking but excluded from migration.
+     *
+     * @param fileId File ID
+     * @return Updated file DTO
+     */
+    @Transactional
+    public FileDto markFileAsIgnored(UUID fileId) {
+        log.info("Marking file {} as ignored", fileId);
+
+        ScannedFile file = fileRepository.findById(fileId)
+            .orElseThrow(() -> new IllegalArgumentException("File not found: " + fileId));
+
+        file.setIgnoreForMigration(true);
+        ScannedFile saved = fileRepository.save(file);
+
+        return fileMapper.toDto(saved);
+    }
+
+    /**
+     * Mark a folder and all its contents as ignored for migration.
+     * Cascades to all files and subfolders under the specified path.
+     *
+     * @param sourceId Source ID
+     * @param folderPath Folder path to ignore
+     * @return Number of files marked as ignored
+     */
+    @Transactional
+    public int markFolderAsIgnored(UUID sourceId, String folderPath) {
+        log.info("Marking folder as ignored: source={}, path={}", sourceId, folderPath);
+
+        // Verify source exists
+        Source source = sourceRepository.findById(sourceId)
+            .orElseThrow(() -> new IllegalArgumentException("Source not found: " + sourceId));
+
+        // Find all files under this folder path
+        // Path should start with folderPath/ or be exactly folderPath
+        String pathPrefix = folderPath.endsWith("/") ? folderPath : folderPath + "/";
+
+        List<ScannedFile> filesToIgnore = fileRepository.findBySourceAndPathStartingWith(source, pathPrefix);
+
+        // Also check if the folder itself exists as a file entry
+        fileRepository.findBySourceAndPath(source, folderPath)
+            .ifPresent(filesToIgnore::add);
+
+        // Mark all files as ignored
+        int count = 0;
+        for (ScannedFile file : filesToIgnore) {
+            if (!file.getIgnoreForMigration()) {
+                file.setIgnoreForMigration(true);
+                fileRepository.save(file);
+                count++;
+            }
+        }
+
+        log.info("Marked {} files as ignored under folder {}", count, folderPath);
+        return count;
+    }
+
+    /**
+     * Get all ignored files for a source.
+     * Used by scanner to fetch list of files to physically delete.
+     *
+     * @param sourceId Source ID
+     * @return List of ignored file DTOs
+     */
+    @Transactional(readOnly = true)
+    public List<FileDto> getIgnoredFiles(UUID sourceId) {
+        log.info("Fetching ignored files for source {}", sourceId);
+
+        // Verify source exists
+        Source source = sourceRepository.findById(sourceId)
+            .orElseThrow(() -> new IllegalArgumentException("Source not found: " + sourceId));
+
+        List<ScannedFile> ignoredFiles = fileRepository.findBySourceAndIgnoreForMigration(source, true);
+
+        log.info("Found {} ignored files", ignoredFiles.size());
+        return ignoredFiles.stream()
+            .map(fileMapper::toDto)
+            .toList();
+    }
+
+    /**
+     * Mark ignored files as deleted after physical deletion by scanner.
+     *
+     * @param fileIds List of file IDs that were deleted
+     * @return Number of files marked as deleted
+     */
+    @Transactional
+    public int markFilesAsDeleted(List<UUID> fileIds) {
+        log.info("Marking {} files as deleted", fileIds.size());
+
+        int count = 0;
+        for (UUID fileId : fileIds) {
+            Optional<ScannedFile> fileOpt = fileRepository.findById(fileId);
+            if (fileOpt.isPresent()) {
+                ScannedFile file = fileOpt.get();
+                file.setState(FileState.DELETED);
+                fileRepository.save(file);
+                count++;
+            }
+        }
+
+        log.info("Marked {} files as deleted", count);
+        return count;
+    }
 }

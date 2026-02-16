@@ -107,7 +107,7 @@ public class Source {
     private Instant lastSeen;
 
     @Enumerated(EnumType.STRING)
-    @Column(name = "source_type")
+    @Column(name = "source_type", length = 20)
     @Builder.Default
     private SourceScanType sourceScanType = SourceScanType.DISCOVERY;
 

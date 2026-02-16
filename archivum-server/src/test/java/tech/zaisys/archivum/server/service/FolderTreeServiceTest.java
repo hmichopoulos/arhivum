@@ -30,6 +30,9 @@ class FolderTreeServiceTest {
     @Mock
     private ScannedFileRepository fileRepository;
 
+    @Mock
+    private FolderZoneService folderZoneService;
+
     @InjectMocks
     private FolderTreeService folderTreeService;
 
@@ -40,6 +43,8 @@ class FolderTreeServiceTest {
     void setUp() {
         sourceId = UUID.randomUUID();
         testFiles = new ArrayList<>();
+        // Mock folder zone service to return empty map by default
+        when(folderZoneService.loadFolderZones(any(UUID.class))).thenReturn(new java.util.HashMap<>());
     }
 
     @Test

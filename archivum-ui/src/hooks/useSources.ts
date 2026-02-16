@@ -90,3 +90,23 @@ export function useSourceTree(sourceId: string) {
     enabled: !!sourceId
   });
 }
+
+/**
+ * Hook to update folder zone classification.
+ */
+export function useUpdateFolderZone() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ sourceId, folderPath, zone }: { sourceId: string; folderPath: string; zone: any }) =>
+      api.updateFolderZone(sourceId, folderPath, zone),
+    onSuccess: (_, variables) => {
+      // Invalidate the source tree to refresh the UI
+      queryClient.invalidateQueries({ queryKey: ['sources', variables.sourceId, 'tree'] });
+      // Also invalidate the source details
+      queryClient.invalidateQueries({ queryKey: ['sources', variables.sourceId] });
+      // Invalidate code projects in case zone change affects filtering
+      queryClient.invalidateQueries({ queryKey: ['code-projects'] });
+    }
+  });
+}

@@ -7,6 +7,7 @@ import { Layout } from './components/Layout';
 import { SourcesListPage } from './pages/SourcesListPage';
 import { SourceDetailsPage } from './pages/SourceDetailsPage';
 import { CodeProjectsPage } from './pages/CodeProjectsPage';
+import { DestinationsListPage } from './pages/DestinationsListPage';
 
 function App() {
   return (
@@ -24,6 +25,9 @@ function App() {
 
         {/* Code projects route */}
         <Route path="/code-projects" element={<CodeProjectsPage />} />
+
+        {/* Destinations route */}
+        <Route path="/destinations" element={<DestinationsListPage />} />
 
         {/* 404 fallback */}
         <Route path="*" element={<NotFound />} />

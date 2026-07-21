@@ -23,6 +23,7 @@ import tech.zaisys.archivum.server.domain.Source;
 import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
+import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -85,6 +86,7 @@ class ScannedFileRepositoryTest {
 
         // Create test file
         testFile = ScannedFile.builder()
+            .id(UUID.randomUUID())
             .source(testSource)
             .path("photos/vacation.jpg")
             .name("vacation.jpg")
@@ -170,6 +172,7 @@ class ScannedFileRepositoryTest {
 
         // When/Then - Attempting to save duplicate path for same source
         ScannedFile duplicate = ScannedFile.builder()
+            .id(UUID.randomUUID())
             .source(testSource)
             .path("photos/vacation.jpg") // Same path
             .name("vacation.jpg")
@@ -191,6 +194,7 @@ class ScannedFileRepositoryTest {
         scannedFileRepository.save(testFile);
 
         ScannedFile file2 = ScannedFile.builder()
+            .id(UUID.randomUUID())
             .source(testSource)
             .path("photos/beach.jpg")
             .name("beach.jpg")
@@ -231,6 +235,7 @@ class ScannedFileRepositoryTest {
         scannedFileRepository.save(testFile);
 
         ScannedFile duplicate = ScannedFile.builder()
+            .id(UUID.randomUUID())
             .source(testSource)
             .path("photos/vacation_copy.jpg")
             .name("vacation_copy.jpg")
@@ -281,6 +286,7 @@ class ScannedFileRepositoryTest {
         scannedFileRepository.save(testFile);
 
         ScannedFile duplicateFile = ScannedFile.builder()
+            .id(UUID.randomUUID())
             .source(testSource)
             .path("photos/dup.jpg")
             .name("dup.jpg")
@@ -309,6 +315,7 @@ class ScannedFileRepositoryTest {
         scannedFileRepository.save(testFile);
 
         ScannedFile duplicateFile = ScannedFile.builder()
+            .id(UUID.randomUUID())
             .source(testSource)
             .path("photos/dup.jpg")
             .name("dup.jpg")
@@ -335,6 +342,7 @@ class ScannedFileRepositoryTest {
         scannedFileRepository.save(testFile);
 
         ScannedFile pdfFile = ScannedFile.builder()
+            .id(UUID.randomUUID())
             .source(testSource)
             .path("documents/report.pdf")
             .name("report.pdf")
@@ -364,10 +372,11 @@ class ScannedFileRepositoryTest {
         // When
         sourceRepository.delete(testSource);
         entityManager.flush();
+        entityManager.clear(); // Evict cached entity so findById hits the DB
 
         // Then
         Optional<ScannedFile> found = scannedFileRepository.findById(saved.getId());
-        assertFalse(found.isPresent()); // File should be deleted when source is deleted
+        assertFalse(found.isPresent()); // File should be deleted when source is deleted (ON DELETE CASCADE)
     }
 
     @Test
@@ -377,6 +386,7 @@ class ScannedFileRepositoryTest {
         entityManager.flush();
 
         ScannedFile duplicate = ScannedFile.builder()
+            .id(UUID.randomUUID())
             .source(testSource)
             .path("photos/vacation_copy.jpg")
             .name("vacation_copy.jpg")
@@ -399,5 +409,72 @@ class ScannedFileRepositoryTest {
         assertTrue(foundDuplicate.get().getIsDuplicate());
         assertNotNull(foundDuplicate.get().getOriginalFile());
         assertEquals(original.getId(), foundDuplicate.get().getOriginalFile().getId());
+    }
+
+    @Test
+    void testFindBySourceAndPathStartingWith() {
+        // Given - two files under photos/, one under documents/
+        scannedFileRepository.save(testFile); // photos/vacation.jpg
+        scannedFileRepository.save(fileAt("photos/sub/beach.jpg", "beach_hash" + "0".repeat(54)));
+        scannedFileRepository.save(fileAt("documents/report.pdf", "report_hash" + "0".repeat(53)));
+        entityManager.flush();
+
+        // When
+        List<ScannedFile> underPhotos =
+            scannedFileRepository.findBySourceAndPathStartingWith(testSource, "photos/");
+
+        // Then - only the two files under photos/, not the document
+        assertEquals(2, underPhotos.size());
+        assertTrue(underPhotos.stream().allMatch(f -> f.getPath().startsWith("photos/")));
+    }
+
+    @Test
+    void testFindBySourceAndPath() {
+        // Given
+        scannedFileRepository.save(testFile);
+        entityManager.flush();
+
+        // When
+        Optional<ScannedFile> found =
+            scannedFileRepository.findBySourceAndPath(testSource, "photos/vacation.jpg");
+
+        // Then
+        assertTrue(found.isPresent());
+        assertEquals("vacation.jpg", found.get().getName());
+        assertTrue(scannedFileRepository.findBySourceAndPath(testSource, "photos/missing.jpg").isEmpty());
+    }
+
+    @Test
+    void testFindBySourceAndIgnoreForMigration() {
+        // Given - one ignored file, one not ignored
+        testFile.setIgnoreForMigration(true);
+        scannedFileRepository.save(testFile);
+        scannedFileRepository.save(fileAt("photos/keep.jpg", "keep_hash" + "0".repeat(55)));
+        entityManager.flush();
+
+        // When
+        List<ScannedFile> ignored =
+            scannedFileRepository.findBySourceAndIgnoreForMigration(testSource, true);
+        List<ScannedFile> notIgnored =
+            scannedFileRepository.findBySourceAndIgnoreForMigration(testSource, false);
+
+        // Then
+        assertEquals(1, ignored.size());
+        assertEquals("photos/vacation.jpg", ignored.get(0).getPath());
+        assertEquals(1, notIgnored.size());
+        assertEquals("photos/keep.jpg", notIgnored.get(0).getPath());
+    }
+
+    private ScannedFile fileAt(String path, String sha256) {
+        return ScannedFile.builder()
+            .id(UUID.randomUUID())
+            .source(testSource)
+            .path(path)
+            .name(path.substring(path.lastIndexOf('/') + 1))
+            .extension("jpg")
+            .size(1024000L)
+            .sha256(sha256)
+            .scannedAt(Instant.now())
+            .build();
     }
 }

@@ -1,17 +1,59 @@
 # Archivum Development Plan
 
-**Last Updated:** 2025-11-28
-**Current Phase:** Scanner MVP
-**Active Milestone:** Milestone 3 - Advanced Metadata (ready to start)
+**Last Updated:** 2026-07-20
+**Current Phase:** Migration System (server + UI in active use)
+**Active Milestone:** Migration advanced features (Milestone 5) — not yet started
 
 ---
 
 ## Status Overview
 
-✅ Completed: 3 milestones
-🔄 In Progress: None (ready to start Milestone 3)
-📋 Upcoming: 3 milestones (implementation)
-⏳ Future: Server, UI, advanced features
+All four modules exist and are working: `archivum-api`, `archivum-scanner`,
+`archivum-server`, `archivum-ui`. `./gradlew build` is **green** (all modules
+compile, all tests pass).
+
+✅ Scanner MVP: delivered (core scanning, hashing, metadata, upload, code-project detection, zones)
+✅ Server: operational (REST API, PostgreSQL/Flyway, ingestion, dedup, destinations)
+✅ UI: operational (sources, files, code projects, destinations)
+✅ Migration System: Milestones 1–4 delivered (disk tracking, NAS migration, destination scanning, warehouse)
+🔄 In Progress: none tracked
+📋 Next: Migration advanced features (git archive, bi-directional refinements)
+
+> **Historical note:** The milestone list below (M0–M5) describes the original
+> **Scanner MVP** plan from Nov 2025. Development since then moved onto the
+> **Migration System** track — see "Migration System Status" below and
+> `docs/IMPLEMENTATION_PLAN.md`. The scanner M3–M5 items were largely absorbed
+> into later work; treat them as historical rather than the live backlog.
+
+---
+
+## Build Environment
+
+- **Requires JDK 21** (Temurin 21 verified). A Java 8 or JRE-only 21 will fail:
+  the Gradle build needs a full JDK 21 *with* `javac`, and the Sonar plugin
+  needs Java 11+ just to configure.
+- Build/test: `./gradlew build` from the repo root.
+
+---
+
+## Migration System Status
+
+Tracked in `docs/IMPLEMENTATION_PLAN.md` and `docs/MIGRATION_WORKFLOW.md`.
+Schema at **V019** (`db/migration/`).
+
+| Milestone | Description | Status |
+|-----------|-------------|--------|
+| M1 | Foundation & disk tracking (offline workflow, source/file states) | ✅ Delivered |
+| M2 | Basic NAS migration | ✅ Delivered |
+| M3 | Destination scanning (baseline / pinning already-organized files) | ✅ Delivered |
+| M4 | Warehouse migration | ✅ Delivered |
+| — | Destination management system (V018, disk-space monitoring) | ✅ Delivered |
+| — | `ignore_for_migration` flag (V019) | ✅ Delivered |
+| M5 | Advanced features (git archive, bi-directional refinements) | 📋 Not started |
+
+**Note (2026-07-20):** `main` was found broken — `FileService` (ignore-for-migration
+feature) called three `ScannedFileRepository` methods that were never added. Fixed by
+adding the derived-query methods + `Source` import; build is green again.
 
 ---
 
@@ -276,19 +318,20 @@ The following features are **not included in MVP** and will be implemented later
 
 ---
 
-## Timeline Summary
+## Timeline Summary (Scanner MVP — historical)
 
 | Milestone | Duration | Status | Started | Completed |
 |-----------|----------|--------|---------|-----------|
 | M0: Shared API | 3h | ✅ Complete | Nov 27 | Nov 27 |
 | M1: Documentation | 6h | ✅ Complete | Nov 28 | Nov 28 |
 | M2: Foundation & Core | 10h | ✅ Complete | Nov 28 | Nov 28 |
-| M3: Advanced Metadata | 8h | 📋 Next | TBD | TBD |
-| M4: Hierarchy & Archives | 10h | 📋 Upcoming | TBD | TBD |
-| M5: Copy & Polish | 8h | 📋 Upcoming | TBD | TBD |
-| **Total** | **45h** | **42% done** | | |
+| M3: Advanced Metadata | 8h | ✅ Absorbed into later work | — | — |
+| M4: Hierarchy & Archives | 10h | ✅ Absorbed into later work | — | — |
+| M5: Copy & Polish | 8h | ✅ Absorbed into later work | — | — |
 
-**Estimated Completion:** 3-4 weeks (assuming ~8-10h/week)
+The project has since moved well beyond the Scanner MVP: server, UI, and the
+Migration System (Milestones 1–4) are all delivered. See "Migration System
+Status" above for the live status.
 
 ---
 
@@ -395,4 +438,4 @@ After every 2-3 milestones, we do a quick retrospective:
 
 **Maintained by:** Haris + Claude
 **Project Start:** November 2025
-**Last Review:** November 28, 2025
+**Last Review:** July 20, 2026

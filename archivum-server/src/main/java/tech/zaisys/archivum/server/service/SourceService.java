@@ -52,7 +52,9 @@ public class SourceService {
             .diskState(request.getDiskState())
             .mountPoint(request.getMountPoint())
             .lastSeen(request.getLastSeen())
-            .sourceScanType(request.getSourceScanType())
+            .sourceScanType(request.getSourceScanType() != null
+                ? request.getSourceScanType()
+                : tech.zaisys.archivum.api.enums.SourceScanType.DISCOVERY)
             .build();
 
         // Set parent if specified

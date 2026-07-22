@@ -37,7 +37,6 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
  *
  * TODO: Enable when Docker environment is properly configured for tests
  */
-@org.junit.jupiter.api.Disabled("Requires Docker - enable when CI/CD environment is configured")
 @SpringBootTest
 @AutoConfigureMockMvc
 @Testcontainers

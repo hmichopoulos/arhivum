@@ -27,7 +27,6 @@ import static org.assertj.core.api.Assertions.assertThat;
  *
  * TODO: Enable when Docker environment is properly configured for tests
  */
-@org.junit.jupiter.api.Disabled("Requires Docker - enable when CI/CD environment is configured")
 @DataJpaTest
 @Testcontainers
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
@@ -45,7 +44,7 @@ class FolderZoneRepositoryTest {
         registry.add("spring.datasource.url", postgres::getJdbcUrl);
         registry.add("spring.datasource.username", postgres::getUsername);
         registry.add("spring.datasource.password", postgres::getPassword);
-        registry.add("spring.jpa.hibernate.ddl-auto", () -> "create-drop");
+        registry.add("spring.jpa.hibernate.ddl-auto", () -> "validate");
     }
 
     @Autowired

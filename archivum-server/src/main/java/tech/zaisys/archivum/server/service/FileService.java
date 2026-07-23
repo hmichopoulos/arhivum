@@ -260,18 +260,15 @@ public class FileService {
         fileRepository.findBySourceIdAndPath(sourceId, folderPath)
             .ifPresent(filesToIgnore::add);
 
-        // Mark all files as ignored
-        int count = 0;
-        for (ScannedFile file : filesToIgnore) {
-            if (!file.getIgnoreForMigration()) {
-                file.setIgnoreForMigration(true);
-                fileRepository.save(file);
-                count++;
-            }
-        }
+        // Flip only the not-yet-ignored files and persist them in one batch
+        List<ScannedFile> newlyIgnored = filesToIgnore.stream()
+            .filter(file -> !file.getIgnoreForMigration())
+            .toList();
+        newlyIgnored.forEach(file -> file.setIgnoreForMigration(true));
+        fileRepository.saveAll(newlyIgnored);
 
-        log.info("Marked {} files as ignored under folder {}", count, folderPath);
-        return count;
+        log.info("Marked {} files as ignored under folder {}", newlyIgnored.size(), folderPath);
+        return newlyIgnored.size();
     }
 
     /**

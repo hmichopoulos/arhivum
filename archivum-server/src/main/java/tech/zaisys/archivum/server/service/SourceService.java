@@ -42,7 +42,7 @@ public class SourceService {
             .type(request.getType())
             .rootPath(request.getRootPath())
             .physicalId(request.getPhysicalId())
-            .status(tech.zaisys.archivum.api.enums.ScanStatus.PENDING)
+            .status(ScanStatus.PENDING)
             .postponed(request.getPostponed() != null ? request.getPostponed() : false)
             .notes(request.getNotes())
             .totalFiles(0L)

@@ -29,13 +29,12 @@ import static org.junit.jupiter.api.Assertions.*;
 
 /**
  * Integration tests for ScannedFileRepository using Testcontainers.
- * These tests require Docker to be running.
- *
- * To run these tests locally, set environment variable: DOCKER_HOST or ensure Docker is running.
- * These tests will be skipped in CI/environments without Docker unless TESTCONTAINERS_ENABLED=true.
+ * These tests require a Docker-compatible container runtime (Docker or podman).
+ * They fail loudly if none is available rather than skipping silently, so a
+ * missing runtime cannot let a real break slip through unnoticed.
  */
 @DataJpaTest
-@Testcontainers(disabledWithoutDocker = true)
+@Testcontainers
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
 class ScannedFileRepositoryTest {
 

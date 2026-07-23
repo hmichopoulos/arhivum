@@ -3,6 +3,7 @@ package tech.zaisys.archivum.server.service;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -543,11 +544,13 @@ class FileServiceTest {
         // When
         int count = fileService.markFolderAsIgnored(sourceId, "photos");
 
-        // Then - only the not-yet-ignored file is flipped and saved
+        // Then - only the not-yet-ignored file is flipped and batch-saved
         assertEquals(1, count);
         assertTrue(toIgnore.getIgnoreForMigration());
-        verify(fileRepository).save(toIgnore);
-        verify(fileRepository, never()).save(alreadyIgnored);
+        ArgumentCaptor<List<ScannedFile>> captor = ArgumentCaptor.forClass(List.class);
+        verify(fileRepository).saveAll(captor.capture());
+        assertEquals(1, captor.getValue().size());
+        assertSame(toIgnore, captor.getValue().get(0));
     }
 
     @Test
@@ -572,7 +575,9 @@ class FileServiceTest {
         // Then
         assertEquals(1, count);
         assertTrue(folderEntry.getIgnoreForMigration());
-        verify(fileRepository).save(folderEntry);
+        ArgumentCaptor<List<ScannedFile>> captor = ArgumentCaptor.forClass(List.class);
+        verify(fileRepository).saveAll(captor.capture());
+        assertSame(folderEntry, captor.getValue().get(0));
     }
 
     @Test
@@ -583,7 +588,7 @@ class FileServiceTest {
         // When/Then
         assertThrows(IllegalArgumentException.class,
             () -> fileService.markFolderAsIgnored(sourceId, "photos"));
-        verify(fileRepository, never()).save(any());
+        verify(fileRepository, never()).saveAll(any());
     }
 
     @Test

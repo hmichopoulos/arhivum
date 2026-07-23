@@ -24,8 +24,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 /**
  * Integration tests for FolderZoneRepository using Testcontainers.
- *
- * TODO: Enable when Docker environment is properly configured for tests
  */
 @DataJpaTest
 @Testcontainers

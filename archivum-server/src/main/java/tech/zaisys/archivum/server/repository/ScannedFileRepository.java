@@ -220,15 +220,6 @@ public interface ScannedFileRepository extends JpaRepository<ScannedFile, UUID> 
     List<ScannedFile> findBySourceAndPathStartingWith(Source source, String pathPrefix);
 
     /**
-     * Find a file by source and exact path.
-     *
-     * @param source Source
-     * @param path Exact file path
-     * @return Optional file
-     */
-    Optional<ScannedFile> findBySourceAndPath(Source source, String path);
-
-    /**
      * Find all files for a source by their ignore-for-migration flag.
      *
      * @param source Source

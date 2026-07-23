@@ -537,7 +537,7 @@ class FileServiceTest {
         when(sourceRepository.findById(sourceId)).thenReturn(Optional.of(testSource));
         when(fileRepository.findBySourceAndPathStartingWith(testSource, "photos/"))
             .thenReturn(new ArrayList<>(List.of(alreadyIgnored, toIgnore)));
-        when(fileRepository.findBySourceAndPath(testSource, "photos"))
+        when(fileRepository.findBySourceIdAndPath(sourceId, "photos"))
             .thenReturn(Optional.empty());
 
         // When
@@ -563,7 +563,7 @@ class FileServiceTest {
         when(sourceRepository.findById(sourceId)).thenReturn(Optional.of(testSource));
         when(fileRepository.findBySourceAndPathStartingWith(testSource, "photos/"))
             .thenReturn(new ArrayList<>());
-        when(fileRepository.findBySourceAndPath(testSource, "photos"))
+        when(fileRepository.findBySourceIdAndPath(sourceId, "photos"))
             .thenReturn(Optional.of(folderEntry));
 
         // When

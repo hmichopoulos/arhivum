@@ -413,9 +413,10 @@ class ScannedFileRepositoryTest {
 
     @Test
     void testFindBySourceAndPathStartingWith() {
-        // Given - two files under photos/, one under documents/
+        // Given - two files under photos/, plus a sibling folder and an unrelated one
         scannedFileRepository.save(testFile); // photos/vacation.jpg
         scannedFileRepository.save(fileAt("photos/sub/beach.jpg", "beach_hash" + "0".repeat(54)));
+        scannedFileRepository.save(fileAt("photos2/other.jpg", "photos2_ha" + "0".repeat(54)));
         scannedFileRepository.save(fileAt("documents/report.pdf", "report_hash" + "0".repeat(53)));
         entityManager.flush();
 
@@ -423,25 +424,10 @@ class ScannedFileRepositoryTest {
         List<ScannedFile> underPhotos =
             scannedFileRepository.findBySourceAndPathStartingWith(testSource, "photos/");
 
-        // Then - only the two files under photos/, not the document
+        // Then - only the two files under photos/; the "photos2/" sibling is excluded
+        // by the trailing slash, and the unrelated document is excluded too
         assertEquals(2, underPhotos.size());
         assertTrue(underPhotos.stream().allMatch(f -> f.getPath().startsWith("photos/")));
-    }
-
-    @Test
-    void testFindBySourceAndPath() {
-        // Given
-        scannedFileRepository.save(testFile);
-        entityManager.flush();
-
-        // When
-        Optional<ScannedFile> found =
-            scannedFileRepository.findBySourceAndPath(testSource, "photos/vacation.jpg");
-
-        // Then
-        assertTrue(found.isPresent());
-        assertEquals("vacation.jpg", found.get().getName());
-        assertTrue(scannedFileRepository.findBySourceAndPath(testSource, "photos/missing.jpg").isEmpty());
     }
 
     @Test

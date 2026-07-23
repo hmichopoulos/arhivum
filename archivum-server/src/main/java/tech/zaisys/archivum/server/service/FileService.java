@@ -257,7 +257,7 @@ public class FileService {
         List<ScannedFile> filesToIgnore = fileRepository.findBySourceAndPathStartingWith(source, pathPrefix);
 
         // Also check if the folder itself exists as a file entry
-        fileRepository.findBySourceAndPath(source, folderPath)
+        fileRepository.findBySourceIdAndPath(sourceId, folderPath)
             .ifPresent(filesToIgnore::add);
 
         // Mark all files as ignored

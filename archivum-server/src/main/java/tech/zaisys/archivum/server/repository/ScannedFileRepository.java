@@ -11,6 +11,7 @@ import org.springframework.transaction.annotation.Transactional;
 import tech.zaisys.archivum.api.enums.FileState;
 import tech.zaisys.archivum.api.enums.FileStatus;
 import tech.zaisys.archivum.server.domain.ScannedFile;
+import tech.zaisys.archivum.server.domain.Source;
 
 import java.util.List;
 import java.util.Optional;
@@ -207,4 +208,23 @@ public interface ScannedFileRepository extends JpaRepository<ScannedFile, UUID> 
      */
     @Query("SELECT COALESCE(SUM(f.size), 0) FROM ScannedFile f WHERE f.source.id = :sourceId AND f.path LIKE CONCAT(:folderPath, '%')")
     long sumSizeBySourceIdAndPathStartingWith(@Param("sourceId") UUID sourceId, @Param("folderPath") String folderPath);
+
+    /**
+     * Find all files for a source whose path starts with the given prefix.
+     * Used to cascade migration-ignore over a folder's contents.
+     *
+     * @param source Source
+     * @param pathPrefix Path prefix (e.g., "photos/2020/")
+     * @return List of files under the prefix
+     */
+    List<ScannedFile> findBySourceAndPathStartingWith(Source source, String pathPrefix);
+
+    /**
+     * Find all files for a source by their ignore-for-migration flag.
+     *
+     * @param source Source
+     * @param ignoreForMigration Flag value
+     * @return List of matching files
+     */
+    List<ScannedFile> findBySourceAndIgnoreForMigration(Source source, boolean ignoreForMigration);
 }

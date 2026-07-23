@@ -517,4 +517,107 @@ class FileServiceTest {
         verify(fileRepository).findById(fileId);
         verify(fileRepository, never()).findBySha256(any());
     }
+
+    @Test
+    void testMarkFolderAsIgnored_CascadesAndSkipsAlreadyIgnored() {
+        // Given - one file under the folder already ignored, one not
+        ScannedFile alreadyIgnored = ScannedFile.builder()
+            .id(UUID.randomUUID())
+            .source(testSource)
+            .path("photos/old.jpg")
+            .ignoreForMigration(true)
+            .build();
+        ScannedFile toIgnore = ScannedFile.builder()
+            .id(UUID.randomUUID())
+            .source(testSource)
+            .path("photos/new.jpg")
+            .ignoreForMigration(false)
+            .build();
+
+        when(sourceRepository.findById(sourceId)).thenReturn(Optional.of(testSource));
+        when(fileRepository.findBySourceAndPathStartingWith(testSource, "photos/"))
+            .thenReturn(new ArrayList<>(List.of(alreadyIgnored, toIgnore)));
+        when(fileRepository.findBySourceIdAndPath(sourceId, "photos"))
+            .thenReturn(Optional.empty());
+
+        // When
+        int count = fileService.markFolderAsIgnored(sourceId, "photos");
+
+        // Then - only the not-yet-ignored file is flipped and saved
+        assertEquals(1, count);
+        assertTrue(toIgnore.getIgnoreForMigration());
+        verify(fileRepository).save(toIgnore);
+        verify(fileRepository, never()).save(alreadyIgnored);
+    }
+
+    @Test
+    void testMarkFolderAsIgnored_IncludesFolderEntryItself() {
+        // Given - the folder path also exists as a file entry
+        ScannedFile folderEntry = ScannedFile.builder()
+            .id(UUID.randomUUID())
+            .source(testSource)
+            .path("photos")
+            .ignoreForMigration(false)
+            .build();
+
+        when(sourceRepository.findById(sourceId)).thenReturn(Optional.of(testSource));
+        when(fileRepository.findBySourceAndPathStartingWith(testSource, "photos/"))
+            .thenReturn(new ArrayList<>());
+        when(fileRepository.findBySourceIdAndPath(sourceId, "photos"))
+            .thenReturn(Optional.of(folderEntry));
+
+        // When
+        int count = fileService.markFolderAsIgnored(sourceId, "photos");
+
+        // Then
+        assertEquals(1, count);
+        assertTrue(folderEntry.getIgnoreForMigration());
+        verify(fileRepository).save(folderEntry);
+    }
+
+    @Test
+    void testMarkFolderAsIgnored_SourceNotFound() {
+        // Given
+        when(sourceRepository.findById(sourceId)).thenReturn(Optional.empty());
+
+        // When/Then
+        assertThrows(IllegalArgumentException.class,
+            () -> fileService.markFolderAsIgnored(sourceId, "photos"));
+        verify(fileRepository, never()).save(any());
+    }
+
+    @Test
+    void testGetIgnoredFiles_ReturnsMappedDtos() {
+        // Given
+        ScannedFile ignored1 = ScannedFile.builder()
+            .id(UUID.randomUUID()).source(testSource).path("a.jpg")
+            .ignoreForMigration(true).build();
+        ScannedFile ignored2 = ScannedFile.builder()
+            .id(UUID.randomUUID()).source(testSource).path("b.jpg")
+            .ignoreForMigration(true).build();
+
+        when(sourceRepository.findById(sourceId)).thenReturn(Optional.of(testSource));
+        when(fileRepository.findBySourceAndIgnoreForMigration(testSource, true))
+            .thenReturn(List.of(ignored1, ignored2));
+        when(fileMapper.toDto(ignored1)).thenReturn(FileDto.builder().id(ignored1.getId()).build());
+        when(fileMapper.toDto(ignored2)).thenReturn(FileDto.builder().id(ignored2.getId()).build());
+
+        // When
+        List<FileDto> result = fileService.getIgnoredFiles(sourceId);
+
+        // Then
+        assertEquals(2, result.size());
+        verify(fileRepository).findBySourceAndIgnoreForMigration(testSource, true);
+    }
+
+    @Test
+    void testGetIgnoredFiles_SourceNotFound() {
+        // Given
+        when(sourceRepository.findById(sourceId)).thenReturn(Optional.empty());
+
+        // When/Then
+        assertThrows(IllegalArgumentException.class,
+            () -> fileService.getIgnoredFiles(sourceId));
+        verify(fileRepository, never()).findBySourceAndIgnoreForMigration(any(), anyBoolean());
+    }
 }

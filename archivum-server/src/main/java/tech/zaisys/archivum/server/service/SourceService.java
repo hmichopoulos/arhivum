@@ -8,6 +8,7 @@ import tech.zaisys.archivum.api.dto.CompleteScanRequest;
 import tech.zaisys.archivum.api.dto.CreateSourceRequest;
 import tech.zaisys.archivum.api.dto.SourceDto;
 import tech.zaisys.archivum.api.enums.ScanStatus;
+import tech.zaisys.archivum.api.enums.SourceScanType;
 import tech.zaisys.archivum.server.domain.Source;
 import tech.zaisys.archivum.server.repository.SourceRepository;
 
@@ -52,7 +53,9 @@ public class SourceService {
             .diskState(request.getDiskState())
             .mountPoint(request.getMountPoint())
             .lastSeen(request.getLastSeen())
-            .sourceScanType(request.getSourceScanType())
+            .sourceScanType(request.getSourceScanType() != null
+                ? request.getSourceScanType()
+                : SourceScanType.DISCOVERY)
             .build();
 
         // Set parent if specified

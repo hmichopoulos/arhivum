@@ -34,10 +34,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 /**
  * Integration tests for file ingestion endpoint with real PostgreSQL database.
  * These tests verify that the schema can handle realistic data.
- *
- * TODO: Enable when Docker environment is properly configured for tests
  */
-@org.junit.jupiter.api.Disabled("Requires Docker - enable when CI/CD environment is configured")
 @SpringBootTest
 @AutoConfigureMockMvc
 @Testcontainers
